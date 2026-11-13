@@ -3,9 +3,9 @@ import { Listing, RoommateProfile } from './types';
 
 // Changed to localhost to match your Google OAuth fix!
 // Backend base URL. Always ends in /api (the Django routes live under /api/).
-// If VITE_API_URL isn't set on the host, the live Render backend is used.
+// If VITE_API_URL isn't set on the host, our Render backend (setmystay-api, from render.yaml) is used.
 const RAW_API_URL = (import.meta.env.VITE_API_URL as string | undefined)
-  || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://setmystay-backend.onrender.com/api');
+  || (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://setmystay-api.onrender.com/api');
 const API_URL = RAW_API_URL.replace(/\/+$/, '').replace(/(\/api)?$/, '/api');
 
 const api = axios.create({
