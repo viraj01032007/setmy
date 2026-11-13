@@ -147,7 +147,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
         setNewMatch(res.match);
         refreshSocial();
       } else if (res.status === "requested") {
-        toast({ title: `Request sent to ${profile.name} 💌`, description: "You'll be able to chat as soon as they accept." });
+        toast({ title: `Request sent to ${profile.name}`, description: "You can chat as soon as they accept." });
         refreshSocial();
       }
     } catch {
@@ -238,8 +238,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
       {/* Title */}
       <div className="mb-4 sm:mb-6 flex items-end justify-between gap-4">
         <div>
-          <p className="hidden sm:block text-sm font-semibold uppercase tracking-wider text-orange-500">Roommate Match</p>
-          <h1 className="sm:mt-1 text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900">Find your flatmate</h1>
+          <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-ink">Find a flatmate</h1>
           <p className="mt-2 hidden sm:block text-muted-foreground">Swipe right if you'd share a home. When they say yes too, you can chat.</p>
         </div>
         {quota && (
@@ -400,13 +399,13 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
               </div>
               <MessageCircle className="h-8 w-8 text-orange-500" />
             </button>
-            <div className="rounded-3xl bg-gradient-to-br from-blue-700 to-indigo-600 p-5 text-white">
-              <p className="font-bold">How it works</p>
-              <ol className="mt-3 space-y-2 text-sm text-blue-100">
-                <li>1. Swipe right on people you like</li>
-                <li>2. They get your request</li>
-                <li>3. If they accept, chat unlocks</li>
-                <li>4. Visit flats together 🏠</li>
+            <div className="rounded-3xl bg-ink p-5 text-white">
+              <p className="font-display text-lg font-bold">How it works</p>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300 marker:text-tolet">
+                <li>Swipe right on people you'd live with</li>
+                <li>They get your request</li>
+                <li>If they accept, chat opens</li>
+                <li>Visit flats together</li>
               </ol>
             </div>
           </aside>

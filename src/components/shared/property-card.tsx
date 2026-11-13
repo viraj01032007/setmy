@@ -26,7 +26,7 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
 
   return (
     <div 
-      className="bg-card rounded-2xl shadow-md overflow-hidden border border-transparent hover:border-primary/50 hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 group cursor-pointer h-full flex flex-col"
+      className="bg-card rounded-lg overflow-hidden border border-slate-200 hover:border-ink transition-colors group cursor-pointer h-full flex flex-col"
       onClick={() => onViewDetails(listing)}
     >
       <div className="relative h-48 w-full flex-shrink-0">
@@ -63,7 +63,7 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
         </Button>
       </div>
       <div className="p-4 space-y-3 flex-grow flex flex-col">
-        <h3 className="text-lg font-bold text-card-foreground truncate group-hover:text-primary">{listing.title}</h3>
+        <h3 className="font-display text-lg font-bold text-ink truncate">{listing.title}</h3>
         
         <div className="flex items-center text-muted-foreground text-sm">
           <MapPin className="w-4 h-4 mr-2" />
@@ -77,17 +77,17 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
         
         <div className="flex flex-wrap gap-2 text-xs">
           {listing.furnishedStatus && <Badge variant="outline">{listing.furnishedStatus}</Badge>}
-          {listing.size && <Badge variant="outline">{listing.size}</Badge>}
+          {listing.size && listing.size !== 'N/A' && <Badge variant="outline">{listing.size}</Badge>}
           {Array.isArray(listing.amenities) && listing.amenities.slice(0, 1).map(amenity => (
             <Badge key={amenity} variant="outline">{amenity}</Badge>
           ))}
         </div>
 
         <div className="mt-auto pt-4">
-            <Button variant="default" size="sm" className="w-full">
-                {isUnlocked && <CheckCircle className="w-4 h-4 mr-2" />}
-                {isUnlocked ? 'View Unlocked Details' : 'View Details'}
-            </Button>
+            <span className="inline-flex items-center text-sm font-semibold text-primary group-hover:underline underline-offset-4">
+                {isUnlocked && <CheckCircle className="w-4 h-4 mr-1.5" />}
+                {isUnlocked ? 'Owner details unlocked' : 'See details'}
+            </span>
         </div>
       </div>
     </div>

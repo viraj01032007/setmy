@@ -44,7 +44,7 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, onActivated, 
           onSuccess: async (response) => {
             try {
               const quota = await activatePlan(plan.id, response);
-              toast({ title: `Welcome to ${plan.name}! 🎉`, description: "Your swipes have been topped up." });
+              toast({ title: `${plan.name} plan active`, description: "Your daily swipes have been topped up." });
               onActivated(quota);
             } catch {
               toast({
@@ -77,10 +77,10 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, onActivated, 
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <RazorpayScript />
       <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-0">
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 pt-7 pb-6 text-white rounded-t-3xl">
+        <div className="bg-ink px-6 pt-7 pb-6 text-white rounded-t-3xl">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-2xl font-extrabold text-white">{title}</DialogTitle>
-            <DialogDescription className="text-blue-100">{desc}</DialogDescription>
+            <DialogTitle className="font-display text-2xl font-extrabold text-white">{title}</DialogTitle>
+            <DialogDescription className="text-slate-300">{desc}</DialogDescription>
           </DialogHeader>
         </div>
         <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-3">

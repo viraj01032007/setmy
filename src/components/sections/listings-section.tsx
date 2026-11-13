@@ -443,7 +443,7 @@ export function ListingsSection({
               const itemType = item.propertyType === 'Roommate' ? 'roommate' : 'listing';
               const isUnlocked = unlockedIds.has(item.id);
               return (
-                <div key={item.id} className="animate-page-in" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+                <div key={item.id}>
                   {itemType === 'roommate'
                     ? <RoommateCard profile={item as RoommateProfile} onViewDetails={(i) => onViewDetails(i, 'roommate')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />
                     : <PropertyCard listing={item as Listing} onViewDetails={(i) => onViewDetails(i, 'listing')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />}

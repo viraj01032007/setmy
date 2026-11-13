@@ -57,10 +57,7 @@ export function MatchPopup({ match, myName, myPic, onChat, onClose }: Props) {
         <button onClick={onClose} className="absolute -top-2 right-0 rounded-full p-2 text-white/70 hover:text-white" aria-label="Close">
           <X className="h-6 w-6" />
         </button>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-300">Roommate found</p>
-        <h2 className="mt-2 text-5xl font-black italic bg-gradient-to-r from-orange-300 via-pink-300 to-sky-300 bg-clip-text text-transparent">
-          It's a Match!
-        </h2>
+        <h2 className="font-display text-5xl font-extrabold text-tolet">It's a match</h2>
         <p className="mt-3 text-white/80">You and {match.profile.name} are both interested. Chat now and plan a visit.</p>
 
         <div className="mt-8 flex items-center justify-center">
@@ -68,7 +65,7 @@ export function MatchPopup({ match, myName, myPic, onChat, onClose }: Props) {
             {myPic ? (
               <img src={myPic} alt="You" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-4xl font-black">{myInitial}</div>
+              <div className="flex h-full w-full items-center justify-center bg-primary text-4xl font-black">{myInitial}</div>
             )}
           </div>
           <div className="-ml-4 h-28 w-28 rotate-6 overflow-hidden rounded-3xl border-4 border-white shadow-2xl">
@@ -77,7 +74,7 @@ export function MatchPopup({ match, myName, myPic, onChat, onClose }: Props) {
         </div>
 
         <div className="mt-10 space-y-3">
-          <Button size="lg" className="h-12 w-full rounded-full bg-orange-500 text-base font-bold hover:bg-orange-600" onClick={() => onChat(match)}>
+          <Button size="lg" className="h-12 w-full rounded-full bg-tolet text-base font-bold text-ink hover:bg-tolet/90" onClick={() => onChat(match)}>
             <MessageCircle className="mr-2 h-5 w-5" /> Send a message
           </Button>
           <Button size="lg" variant="ghost" className="h-12 w-full rounded-full text-white hover:bg-white/10 hover:text-white" onClick={onClose}>

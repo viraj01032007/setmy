@@ -149,7 +149,7 @@ function StaffDashboard() {
             // Roommate listings are stored as properties too, so one endpoint covers all types
             await updatePropertyStatus(id, status);
             toast(status === 'approved'
-                ? { title: "✅ Approved — now live", description: "It's visible on the home page and listings right away." }
+                ? { title: "Approved and live", description: "It's visible on the home page and listings right away." }
                 : { title: "Listing rejected", description: "It stays hidden from the public site." });
             setDetailsModalOpen(false);
             

@@ -48,9 +48,6 @@ const NavLink: React.FC<NavLinkProps> = ({ page, activePage, onClick, children, 
       )}
     >
       {children}
-      {page === 'roommates' && (
-        <span className="ml-1.5 rounded-full bg-orange-500 px-1.5 py-0.5 align-middle text-[10px] font-bold text-white">NEW</span>
-      )}
       {isActive && (
         <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-full" />
       )}

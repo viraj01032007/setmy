@@ -9,12 +9,12 @@ const SWIPE_THRESHOLD = 110; // px the card must travel before it counts as a sw
 
 /** Gradient avatar for people without a photo — looks intentional, not broken. */
 const GRADIENTS = [
-  "from-blue-500 via-indigo-500 to-violet-500",
-  "from-orange-400 via-rose-500 to-pink-500",
-  "from-emerald-400 via-teal-500 to-cyan-600",
-  "from-amber-400 via-orange-500 to-red-500",
-  "from-sky-400 via-blue-500 to-indigo-600",
-  "from-fuchsia-500 via-purple-500 to-indigo-500",
+  "bg-[#1D4ED8]",
+  "bg-[#16181D]",
+  "bg-[#0F766E]",
+  "bg-[#9A3412]",
+  "bg-[#4338CA]",
+  "bg-[#334155]",
 ];
 export function gradientFor(id: string) {
   let h = 0;
@@ -54,10 +54,8 @@ export function ProfileVisual({ profile, className, initialsClass }: { profile: 
   }
   const initials = profile.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className={cn("relative h-full w-full bg-gradient-to-br flex items-center justify-center overflow-hidden", gradientFor(profile.id), className)}>
-      <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10" />
-      <div className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-white/10" />
-      <span className={cn("relative font-extrabold text-white/95 tracking-tight drop-shadow-sm text-7xl", initialsClass)}>{initials}</span>
+    <div className={cn("relative h-full w-full flex items-center justify-center overflow-hidden", gradientFor(profile.id), className)}>
+      <span className={cn("relative font-display font-extrabold text-white tracking-tight text-7xl", initialsClass)}>{initials}</span>
     </div>
   );
 }

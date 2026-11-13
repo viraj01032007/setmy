@@ -34,7 +34,7 @@ export function useReviewAlerts(enabled: boolean, onNewRequest?: () => void, int
         const latest = s.latest_pending_id;
         if (!first.current && latest && latest !== lastSeen.current && (lastSeen.current === null || latest > lastSeen.current)) {
           toast({
-            title: "🔔 New listing request",
+            title: "New listing request",
             description: `"${s.latest_pending_title}" is waiting for review. ${s.pending_count} pending in total.`,
           });
           chime();

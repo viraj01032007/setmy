@@ -1021,7 +1021,7 @@ function AdminDashboard() {
 
             setDetailsModalOpen(false);
             toast(status === 'approved'
-                ? { title: "✅ Approved — now live", description: "It shows on the home page and listings immediately." }
+                ? { title: "Approved and live", description: "It shows on the home page and listings immediately." }
                 : { title: "Listing rejected", description: "It stays hidden from the public site." });
         } catch (error) {
             toast({ title: "Error", description: "Failed to update status on server.", variant: "destructive" });

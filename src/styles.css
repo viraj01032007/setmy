@@ -52,6 +52,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-code: var(--font-source-code-pro), ui-monospace, monospace;
+  --font-display: "Bricolage Grotesque", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-tolet: #F6C324;
+  --color-ink: #16181D;
+  --color-concrete: #EEF0F2;
 }
 
 :root {

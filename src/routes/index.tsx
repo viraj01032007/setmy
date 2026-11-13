@@ -529,7 +529,7 @@ function Home() {
 
   const handleCouponWin = (coupon: Coupon) => {
     toast({
-        title: "🎉 You Won a Coupon! 🎉",
+        title: "You won a coupon",
         description: `Code: ${coupon.code} (${coupon.discountPercentage}% off). It has been copied to your clipboard!`,
     });
     navigator.clipboard.writeText(coupon.code);
