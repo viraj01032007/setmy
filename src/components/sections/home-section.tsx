@@ -358,12 +358,12 @@ export function HomeSection({
               <div className="absolute inset-0 translate-x-6 rotate-6 rounded-[28px] bg-gradient-to-br from-emerald-400 to-teal-600 opacity-70" />
               <div className="absolute inset-0 -translate-x-6 -rotate-6 rounded-[28px] bg-gradient-to-br from-sky-400 to-indigo-600 opacity-80" />
               <div className="absolute inset-0 animate-float-slow overflow-hidden rounded-[28px] bg-gradient-to-br from-orange-400 via-rose-500 to-pink-500 shadow-2xl">
-                <div className="flex h-[65%] items-center justify-center text-7xl font-black text-white/90">R</div>
+                <div className="flex h-[65%] items-center justify-center"><Users className="h-24 w-24 text-white/90" /></div>
                 <div className="absolute left-5 top-6 -rotate-12 rounded-lg border-4 border-emerald-300 px-3 text-2xl font-black text-emerald-300">LIKE</div>
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                  <p className="text-2xl font-extrabold">Riya, 23</p>
-                  <p className="text-sm text-white/80">UX Designer · Vashi</p>
-                  <p className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900">₹12,000/mo · 92% match</p>
+                  <p className="text-2xl font-extrabold">Your next flatmate</p>
+                  <p className="text-sm text-white/80">Same area · same budget · same vibe</p>
+                  <p className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900">Match % on every profile</p>
                 </div>
               </div>
               <div className="absolute -bottom-7 left-1/2 flex -translate-x-1/2 gap-4">

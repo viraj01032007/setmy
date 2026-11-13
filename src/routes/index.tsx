@@ -18,7 +18,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import type { Listing, RoommateProfile, Page, ListingType, UnlockPlan, Bed, Advertisement, Coupon, Purchase, AnyListing, PricingData, FilterState } from "@/lib/types";
 import { defaultPricing } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { getProperties, toggleFavoriteProperty, getCoupons, getAdvertisements, createListing, getSiteSettings } from "@/lib/api";
+import { getProperties, toggleFavoriteProperty, getCoupons, getAdvertisements, createListing, getSiteSettings, getMyProperties } from "@/lib/api";
 
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -197,6 +197,12 @@ function Home() {
   useEffect(() => {
     if (isClient) window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activePage, isClient]);
+
+  // "My Properties": the owner's own listings with their review status (pending / live / rejected)
+  useEffect(() => {
+    if (!isClient || activePage !== 'my-properties' || !isLoggedIn) return;
+    getMyProperties().then(setMyProperties);
+  }, [isClient, activePage, isLoggedIn]);
 
   const saveUserData = useCallback(() => {
     if (isLoggedIn && isClient) {

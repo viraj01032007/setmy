@@ -44,6 +44,14 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
           {listing.propertyType === 'PG' ? <BedDouble className="w-3 h-3 mr-1.5" /> : <Home className="w-3 h-3 mr-1.5" />}
           {listing.propertyType}
         </Badge>
+        {listing.status && listing.status !== 'approved' && (
+          <span className={cn(
+            "absolute bottom-3 left-3 rounded-full px-3 py-1 text-xs font-bold shadow",
+            listing.status === 'pending' ? "bg-amber-400 text-amber-950" : "bg-rose-500 text-white",
+          )}>
+            {listing.status === 'pending' ? '⏳ Under review' : 'Not approved'}
+          </span>
+        )}
         <Button 
             size="icon" 
             variant="ghost" 

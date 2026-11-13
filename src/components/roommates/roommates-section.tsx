@@ -17,8 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { RoommateProfile } from "@/lib/types";
 import {
-  FREE_CHAT_LIMIT, LIFESTYLE_TAGS, compatibility, fetchDeck, fetchMatches, fetchQuota, fetchRequests, isDemoMode, loadPrefs,
-  planById, respondToRequest, savePrefs, swipe, undoSwipe, demoSimulateAccept,
+  FREE_CHAT_LIMIT, LIFESTYLE_TAGS, compatibility, fetchDeck, fetchMatches, fetchQuota, fetchRequests, loadPrefs,
+  planById, respondToRequest, savePrefs, swipe, undoSwipe,
   type Match, type MatchRequest, type MyPreferences, type PlanId, type Quota, type SwipeDirection, type SwipeProfile,
 } from "@/lib/matching";
 import { SwipeCard, ProfileVisual, type SwipeCardHandle } from "./swipe-card";
@@ -42,8 +42,8 @@ interface Props {
 export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse, userName, userPic, initialTab = "discover", onNotificationCount }: Props) {
   const { toast } = useToast();
   const [tab, setTab] = useState<RoommateTab>(initialTab);
-  const [demoMode, setDemoMode] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [deck, setDeck] = useState<SwipeProfile[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
@@ -75,21 +75,21 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
     let alive = true;
     (async () => {
       setLoading(true);
-      const demo = await isDemoMode();
-      if (!alive) return;
-      setDemoMode(demo);
-      if (!demo && !isLoggedIn) {
+      setLoadError(false);
+      if (!isLoggedIn) {
         setLoading(false);
         return;
       }
       try {
-        const [d, q] = await Promise.all([fetchDeck(roommates), fetchQuota()]);
+        const [d, q] = await Promise.all([fetchDeck(), fetchQuota()]);
         if (!alive) return;
         setDeck(d);
         setQuota(q);
         await refreshSocial();
-      } catch {
-        toast({ title: "Couldn't load roommates", description: "Please refresh the page.", variant: "destructive" });
+      } catch (err: any) {
+        if (!alive) return;
+        if (err?.response?.status === 401) onRequireAuth("find roommates");
+        else setLoadError(true);
       } finally {
         if (alive) setLoading(false);
       }
@@ -120,7 +120,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
 
   // ---------------------------------------------------------------- actions
   const guard = () => {
-    if (!demoMode && !isLoggedIn) {
+    if (!isLoggedIn) {
       onRequireAuth("find roommates");
       return false;
     }
@@ -149,16 +149,6 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
       } else if (res.status === "requested") {
         toast({ title: `Request sent to ${profile.name} 💌`, description: "You'll be able to chat as soon as they accept." });
         refreshSocial();
-        if (demoMode && profile.isSample && Math.random() < 0.6) {
-          window.setTimeout(() => {
-            const m = demoSimulateAccept(profile.id);
-            if (m) {
-              toast({ title: `${profile.name} accepted your request! 🎉`, description: "Chat is now unlocked." });
-              setNewMatch(m);
-              refreshSocial();
-            }
-          }, 7000);
-        }
       }
     } catch {
       setDeck((d) => [profile, ...d]);
@@ -201,7 +191,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
   });
 
   const respond = async (req: MatchRequest, accept: boolean) => {
-    if (!demoMode && !isLoggedIn) return onRequireAuth("respond to requests");
+    if (!isLoggedIn) return onRequireAuth("respond to requests");
     try {
       const match = await respondToRequest(req.id, accept);
       setReceived((r) => r.filter((x) => x.id !== req.id));
@@ -264,14 +254,6 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
         )}
       </div>
 
-      {demoMode && (
-        <div className="mb-4 sm:mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-amber-900">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            <b>Preview mode:</b> <span className="sm:hidden">"Sample" profiles are examples; upgrades are free until the backend is live.</span><span className="hidden sm:inline">matching runs in your browser until the backend endpoints are live. Profiles marked "Sample" are examples, and plan upgrades here don't charge money.</span>
-          </p>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="mb-4 sm:mb-6 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
@@ -330,18 +312,25 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
             <div className="relative h-[62svh] min-h-[420px] max-h-[540px] w-full max-w-[400px] lg:h-[540px]">
               {loading ? (
                 <div className="absolute inset-0 animate-pulse rounded-[28px] bg-gradient-to-br from-slate-200 to-slate-100" />
-              ) : !demoMode && !isLoggedIn ? (
+              ) : !isLoggedIn ? (
                 <EmptyCard
                   icon={<Heart className="h-8 w-8" />}
                   title="Sign in to start matching"
                   text="Create your roommate profile and start swiping in under a minute."
                   action={<Button className="rounded-full px-6" onClick={() => onRequireAuth("find roommates")}>Sign in</Button>}
                 />
+              ) : loadError ? (
+                <EmptyCard
+                  icon={<RotateCcw className="h-8 w-8" />}
+                  title="Couldn't load profiles"
+                  text="Our server didn't respond. It may be waking up — try again in a few seconds."
+                  action={<Button className="rounded-full px-6" onClick={() => window.location.reload()}>Try again</Button>}
+                />
               ) : visibleDeck.length === 0 ? (
                 <EmptyCard
                   icon={<Sparkles className="h-8 w-8" />}
                   title="You've seen everyone here"
-                  text={prefs.city || prefs.gender !== "any" ? "Try widening your city or gender filter to see more people." : "New people join every day — check back soon."}
+                  text={prefs.city || prefs.gender !== "any" ? "Try widening your city or gender filter to see more people." : "New people join every day — check back soon, or post your own roommate listing so others can find you."}
                   action={
                     prefs.city || prefs.gender !== "any" ? (
                       <Button variant="outline" className="rounded-full" onClick={() => updatePrefs({ city: "", gender: "any" })}>Clear filters</Button>
@@ -362,7 +351,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
                         score={score}
                         isTop={depth === 0}
                         depth={depth}
-                        disabled={outOfSwipes || busy || (!demoMode && !isLoggedIn)}
+                        disabled={outOfSwipes || busy || !isLoggedIn}
                         onSwiped={(dir) => handleSwiped(profile, dir)}
                       />
                     );
@@ -472,7 +461,6 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
           matches={matches}
           activeId={activeChat}
           onSelect={setActiveChat}
-          demoMode={demoMode}
           lockedIds={lockedChatIds}
           onLockedClick={() => setPlansReason("chat")}
           onActivity={refreshSocial}
@@ -489,7 +477,6 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
         reason={plansReason ?? "manual"}
         onClose={() => setPlansReason(null)}
         currentPlan={(quota?.plan ?? "free") as PlanId}
-        demoMode={demoMode}
         onActivated={(q) => setQuota(q)}
       />
     </div>
@@ -589,7 +576,6 @@ function RequestRow({ req, score, children }: { req: MatchRequest; score: number
       <div className="min-w-0 flex-1">
         <p className="truncate font-bold">
           {p.name}{p.age ? `, ${p.age}` : ""}
-          {p.isSample && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Sample</span>}
         </p>
         <p className="truncate text-sm text-muted-foreground">
           {p.occupation ? `${p.occupation} · ` : ""}{p.locality} · ₹{p.budget.toLocaleString("en-IN")}

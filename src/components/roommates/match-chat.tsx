@@ -8,21 +8,20 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { fetchMessages, sendMessage, demoAutoReply, type ChatMessage, type Match } from "@/lib/matching";
+import { fetchMessages, sendMessage, type ChatMessage, type Match } from "@/lib/matching";
 import { ProfileVisual } from "./swipe-card";
 
 interface Props {
   matches: Match[];
   activeId: string | null;
   onSelect: (id: string | null) => void;
-  demoMode: boolean;
   lockedIds: Set<string>; // matches beyond the Free plan chat limit
   onLockedClick: () => void;
   onActivity: () => void; // refresh list after sending
   onStartSwiping: () => void;
 }
 
-export function MatchChat({ matches, activeId, onSelect, demoMode, lockedIds, onLockedClick, onActivity, onStartSwiping }: Props) {
+export function MatchChat({ matches, activeId, onSelect, lockedIds, onLockedClick, onActivity, onStartSwiping }: Props) {
   const active = matches.find((m) => m.id === activeId) ?? null;
 
   if (matches.length === 0) {
@@ -87,7 +86,7 @@ export function MatchChat({ matches, activeId, onSelect, demoMode, lockedIds, on
       {/* Thread */}
       <div className={cn("flex min-h-0 flex-col", !active && "hidden md:flex")}>
         {active ? (
-          <Thread key={active.id} match={active} demoMode={demoMode} onBack={() => onSelect(null)} onActivity={onActivity} />
+          <Thread key={active.id} match={active} onBack={() => onSelect(null)} onActivity={onActivity} />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
             <MessageCircle className="h-10 w-10" />
@@ -99,7 +98,7 @@ export function MatchChat({ matches, activeId, onSelect, demoMode, lockedIds, on
   );
 }
 
-function Thread({ match, demoMode, onBack, onActivity }: { match: Match; demoMode: boolean; onBack: () => void; onActivity: () => void }) {
+function Thread({ match, onBack, onActivity }: { match: Match; onBack: () => void; onActivity: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
@@ -111,13 +110,13 @@ function Thread({ match, demoMode, onBack, onActivity }: { match: Match; demoMod
     let alive = true;
     const load = () => fetchMessages(match.id).then((m) => alive && setMessages(m)).catch(() => {});
     load();
-    // Simple polling in API mode. Swap for WebSockets / Django Channels later for instant delivery.
-    const t = demoMode ? undefined : window.setInterval(load, 5000);
+    // Polls every 4 s for new messages (swap for WebSockets later for instant delivery)
+    const t = window.setInterval(load, 4000);
     return () => {
       alive = false;
-      if (t) window.clearInterval(t);
+      window.clearInterval(t);
     };
-  }, [match.id, demoMode]);
+  }, [match.id]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,16 +131,12 @@ function Thread({ match, demoMode, onBack, onActivity }: { match: Match; demoMod
       const msg = await sendMessage(match.id, value);
       setMessages((prev) => [...prev, msg]);
       onActivity();
-      if (demoMode) {
-        setTyping(true);
-        window.setTimeout(() => {
-          const reply = demoAutoReply(match.id);
-          setTyping(false);
-          if (reply) setMessages((prev) => [...prev, reply]);
-          onActivity();
-        }, 1400);
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setText(value);
+        toast({ title: "Upgrade to keep chatting", description: "The Free plan includes chats with your first 3 matches.", variant: "destructive" });
+        return;
       }
-    } catch {
       setText(value);
       toast({ title: "Message not sent", description: "Please try again.", variant: "destructive" });
     }

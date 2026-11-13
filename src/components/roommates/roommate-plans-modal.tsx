@@ -14,7 +14,6 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   currentPlan: PlanId;
-  demoMode: boolean;
   onActivated: (quota: Quota) => void;
   reason?: "limit" | "chat" | "manual";
 }
@@ -25,7 +24,7 @@ const ICONS: Record<PlanId, React.ReactNode> = {
   premium: <Crown className="h-5 w-5" />,
 };
 
-export function RoommatePlansModal({ isOpen, onClose, currentPlan, demoMode, onActivated, reason = "manual" }: Props) {
+export function RoommatePlansModal({ isOpen, onClose, currentPlan, onActivated, reason = "manual" }: Props) {
   const [busy, setBusy] = useState<PlanId | null>(null);
   const { toast } = useToast();
 
@@ -33,15 +32,6 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, demoMode, onA
     if (plan.id === "free" || plan.id === currentPlan) return;
     setBusy(plan.id);
 
-    if (demoMode) {
-      // Backend not connected yet → let the client try the paid experience.
-      const quota = await activatePlan(plan.id, {});
-      setBusy(null);
-      toast({ title: `${plan.name} activated (demo)`, description: "No payment was taken. Real payments start once the backend is connected." });
-      onActivated(quota);
-      onClose();
-      return;
-    }
 
     onClose();
     // Give the dialog time to release its focus trap before Razorpay opens.
