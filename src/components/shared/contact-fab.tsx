@@ -29,7 +29,7 @@ export function ContactFab() {
                 >
                     <Button
                         size="icon"
-                        className="rounded-full bg-green-500 hover:bg-green-600 text-white w-12 h-12 shadow-lg flex items-center justify-center"
+                        className="rounded-full bg-[#25D366] hover:bg-[#1ebe5a] text-white w-11 h-11 shadow-md flex items-center justify-center"
                         aria-label="WhatsApp"
                     >
                         <MessageCircle className="w-6 h-6" />
@@ -44,7 +44,7 @@ export function ContactFab() {
                 >
                     <Button
                         size="icon"
-                        className="rounded-full bg-blue-500 hover:bg-blue-600 text-white w-12 h-12 shadow-lg flex items-center justify-center"
+                        className="rounded-full bg-ink hover:bg-ink/90 text-white w-11 h-11 shadow-md flex items-center justify-center"
                         aria-label="Email Us"
                     >
                         <Mail className="w-6 h-6" />
@@ -54,7 +54,7 @@ export function ContactFab() {
                 <Button
                     onClick={() => setIsOpen(!isOpen)}
                     size="icon"
-                    className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground w-12 h-12 sm:w-16 sm:h-16 shadow-xl flex items-center justify-center transition-transform duration-300"
+                    className="rounded-full bg-ink hover:bg-ink/90 text-white w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center transition-transform duration-300"
                     style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}
                 >
                     <Plus className="w-8 h-8" />
