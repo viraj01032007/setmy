@@ -381,9 +381,11 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
 
           {/* Side stats — desktop */}
           <aside className="hidden lg:block space-y-4">
-            <div className="rounded-3xl border bg-card p-5 shadow-sm">
-              <SwipeMeter quota={quota} />
-            </div>
+            {quota && (
+              <div className="rounded-3xl border bg-card p-5 shadow-sm">
+                <SwipeMeter quota={quota} />
+              </div>
+            )}
             <button onClick={() => setTab("requests")} className="flex w-full items-center justify-between rounded-3xl border bg-card p-5 text-left shadow-sm hover:shadow-md transition-shadow">
               <div>
                 <p className="text-sm text-muted-foreground">Requests for you</p>
