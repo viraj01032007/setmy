@@ -57,7 +57,7 @@ export function ContactFab() {
                     className="rounded-full bg-ink hover:bg-ink/90 text-white w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center transition-transform duration-300"
                     style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}
                 >
-                    <Plus className="w-8 h-8" />
+                    <Plus className="w-5 h-5" />
                     <span className="sr-only">Contact Us</span>
                 </Button>
             </div>
