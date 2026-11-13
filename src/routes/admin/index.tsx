@@ -35,7 +35,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getProperties } from '@/lib/api';
+import { getProperties, getAdminQuestion, getSiteSettings, updateSiteSettings, changeAdminCredentials } from '@/lib/api';
+import { useReviewAlerts } from '@/hooks/use-review-alerts';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/icons';
@@ -53,10 +54,7 @@ import { getFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 // Default credentials for the very first run
-const DEFAULT_ADMIN_PASSWORD = 'Bluechip@123';
-const DEFAULT_ADMIN_OTP = '16082007';
 const DEFAULT_ADMIN_QUESTION = 'Who are you?';
-const DEFAULT_ADMIN_ANSWER = 'rohan kholi';
 const DEFAULT_ADMIN_EMAIL = 'setmystay02@gmail.com';
 const DEFAULT_ADMIN_PHONE = '+918210552902';
 const DEFAULT_ADMIN_ADDRESS = 'Office no. 01, Neelsidhi Splendour, Sector 15, CBD Belapur, Navi Mumbai, Maharashtra 400614';
@@ -104,150 +102,88 @@ const generateYearlyData = () => {
     }));
 };
 
-const PasswordChangeForm = ({ currentPassword, onSave, onClose }: { currentPassword: string; onSave: (newPassword: string) => void; onClose: () => void; }) => {
+// ---- Admin login secrets are changed on the SERVER (only hashes are stored there) ----
+const useCredentialSave = (onClose: () => void) => {
     const { toast } = useToast();
-    const [passwords, setPasswords] = useState({
-        current: '',
-        newPass: '',
-        confirmPass: ''
-    });
-
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setPasswords(prev => ({ ...prev, [name]: value }));
+    const [saving, setSaving] = useState(false);
+    const save = async (body: Parameters<typeof changeAdminCredentials>[0], success: string) => {
+        setSaving(true);
+        try {
+            await changeAdminCredentials(body);
+            toast({ title: 'Saved', description: success });
+            onClose();
+        } catch (err: any) {
+            toast({ title: 'Not saved', description: err?.response?.data?.error || 'Please try again.', variant: 'destructive' });
+        } finally {
+            setSaving(false);
+        }
     };
+    return { save, saving };
+};
 
-    const handleSubmitPasswordChange = (e: React.FormEvent) => {
+const PasswordChangeForm = ({ onClose }: { currentPassword?: string; onSave?: (p: string) => void; onClose: () => void; }) => {
+    const { toast } = useToast();
+    const { save, saving } = useCredentialSave(onClose);
+    const [f, setF] = useState({ current: '', newPass: '', confirmPass: '' });
+    const on = (e: React.ChangeEvent<HTMLInputElement>) => setF(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (passwords.current !== currentPassword) {
-            toast({ title: 'Error', description: 'Current password is not correct.', variant: 'destructive' });
-            return;
-        }
-        if (passwords.newPass !== passwords.confirmPass) {
-            toast({ title: 'Error', description: 'New passwords do not match.', variant: 'destructive' });
-            return;
-        }
-        if (passwords.newPass.length < 6) {
-             toast({ title: 'Error', description: 'New password must be at least 6 characters.', variant: 'destructive' });
-            return;
-        }
-        onSave(passwords.newPass);
-        toast({ title: 'Success!', description: 'Your password has been changed.' });
-        onClose();
+        if (f.newPass !== f.confirmPass) return toast({ title: 'Error', description: 'New passwords do not match.', variant: 'destructive' });
+        if (f.newPass.length < 8) return toast({ title: 'Error', description: 'New password must be at least 8 characters.', variant: 'destructive' });
+        save({ current_password: f.current, new_password: f.newPass }, 'Your admin password has been changed.');
     };
-
     return (
-        <form onSubmit={handleSubmitPasswordChange} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" name="current" type="password" value={passwords.current} onChange={handlePasswordChange} required />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" name="newPass" type="password" value={passwords.newPass} onChange={handlePasswordChange} required />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input id="confirm-password" name="confirmPass" type="password" value={passwords.confirmPass} onChange={handlePasswordChange} required />
-            </div>
+        <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="current-password">Current Password</Label><Input id="current-password" name="current" type="password" value={f.current} onChange={on} required /></div>
+            <div className="space-y-2"><Label htmlFor="new-password">New Password</Label><Input id="new-password" name="newPass" type="password" value={f.newPass} onChange={on} required /></div>
+            <div className="space-y-2"><Label htmlFor="confirm-password">Confirm New Password</Label><Input id="confirm-password" name="confirmPass" type="password" value={f.confirmPass} onChange={on} required /></div>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                <Button type="submit">Update Password</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Update Password'}</Button>
             </DialogFooter>
         </form>
     );
 };
 
-const PinChangeForm = ({ currentPin, onSave, onClose }: { currentPin: string; onSave: (newPin: string) => void; onClose: () => void; }) => {
+const PinChangeForm = ({ onClose }: { currentPin?: string; onSave?: (p: string) => void; onClose: () => void; }) => {
     const { toast } = useToast();
-    const [pins, setPins] = useState({
-        current: '',
-        newPin: '',
-    });
-
-    const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setPins(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmitPinChange = (e: React.FormEvent) => {
+    const { save, saving } = useCredentialSave(onClose);
+    const [f, setF] = useState({ current: '', newPin: '' });
+    const on = (e: React.ChangeEvent<HTMLInputElement>) => setF(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (pins.current !== currentPin) {
-            toast({ title: 'Error', description: 'Current PIN is not correct.', variant: 'destructive' });
-            return;
-        }
-        if (!/^\d{8}$/.test(pins.newPin)) {
-             toast({ title: 'Error', description: 'New PIN must be exactly 8 digits.', variant: 'destructive' });
-            return;
-        }
-        onSave(pins.newPin);
-        toast({ title: 'Success!', description: 'Your PIN has been changed.' });
-        onClose();
+        if (!/^\d{4,8}$/.test(f.newPin)) return toast({ title: 'Error', description: 'New PIN must be 4–8 digits.', variant: 'destructive' });
+        save({ current_password: f.current, new_pin: f.newPin }, 'Your PIN has been changed.');
     };
-
     return (
-        <form onSubmit={handleSubmitPinChange} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="current-pin">Current PIN</Label>
-                <Input id="current-pin" name="current" type="password" value={pins.current} onChange={handlePinChange} required maxLength={8} />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="new-pin">New PIN (8 digits)</Label>
-                <Input id="new-pin" name="newPin" type="password" value={pins.newPin} onChange={handlePinChange} required maxLength={8} />
-            </div>
+        <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="current-pin">Current admin password</Label><Input id="current-pin" name="current" type="password" value={f.current} onChange={on} required /></div>
+            <div className="space-y-2"><Label htmlFor="new-pin">New PIN (4–8 digits)</Label><Input id="new-pin" name="newPin" type="password" inputMode="numeric" value={f.newPin} onChange={on} required maxLength={8} /></div>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                <Button type="submit">Update PIN</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Update PIN'}</Button>
             </DialogFooter>
         </form>
     );
 };
 
-const SecurityQuestionChangeForm = ({ currentQuestion, currentAnswer, onSave, onClose }: { currentQuestion: string; currentAnswer: string, onSave: (newQuestion: string, newAnswer: string) => void, onClose: () => void; }) => {
-    const { toast } = useToast();
-    const [security, setSecurity] = useState({
-        current: '',
-        newQuestion: currentQuestion,
-        newAnswer: ''
-    });
-
-    const handleSecurityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setSecurity(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmitSecurityChange = (e: React.FormEvent) => {
+const SecurityQuestionChangeForm = ({ currentQuestion, onSave, onClose }: { currentQuestion: string; currentAnswer?: string, onSave?: (q: string, a: string) => void, onClose: () => void; }) => {
+    const { save, saving } = useCredentialSave(onClose);
+    const [f, setF] = useState({ current: '', newQuestion: currentQuestion, newAnswer: '' });
+    const on = (e: React.ChangeEvent<HTMLInputElement>) => setF(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (security.current.toLowerCase() !== currentAnswer.toLowerCase()) {
-            toast({ title: 'Error', description: 'Your current security answer is not correct.', variant: 'destructive' });
-            return;
-        }
-        if (!security.newQuestion || !security.newAnswer) {
-             toast({ title: 'Error', description: 'New question and answer cannot be empty.', variant: 'destructive' });
-            return;
-        }
-        onSave(security.newQuestion, security.newAnswer);
-        toast({ title: 'Success!', description: 'Your security question and answer have been updated.' });
-        onClose();
+        await save({ current_password: f.current, new_question: f.newQuestion, new_answer: f.newAnswer }, 'Your security question has been updated.');
+        onSave?.(f.newQuestion, '');
     };
-
     return (
-        <form onSubmit={handleSubmitSecurityChange} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="current-answer">Current Security Answer (for: "{currentQuestion}")</Label>
-                <Input id="current-answer" name="current" type="text" value={security.current} onChange={handleSecurityChange} required />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="new-question">New Security Question</Label>
-                <Input id="new-question" name="newQuestion" type="text" value={security.newQuestion} onChange={handleSecurityChange} required />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="new-answer">New Security Answer</Label>
-                <Input id="new-answer" name="newAnswer" type="text" value={security.newAnswer} onChange={handleSecurityChange} required />
-            </div>
+        <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="current-answer">Current admin password</Label><Input id="current-answer" name="current" type="password" value={f.current} onChange={on} required /></div>
+            <div className="space-y-2"><Label htmlFor="new-question">New Security Question</Label><Input id="new-question" name="newQuestion" type="text" value={f.newQuestion} onChange={on} required /></div>
+            <div className="space-y-2"><Label htmlFor="new-answer">New Security Answer</Label><Input id="new-answer" name="newAnswer" type="text" value={f.newAnswer} onChange={on} required /></div>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                <Button type="submit">Update Security Question</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Update Security Question'}</Button>
             </DialogFooter>
         </form>
     );
@@ -804,7 +740,7 @@ function AdminDashboard() {
 
     useEffect(() => {
         const authStatus = localStorage.getItem('admin_authenticated');
-        if (authStatus !== 'true') {
+        if (authStatus !== 'true' || !localStorage.getItem('access_token')) {
             navigate({ to: '/admin/login', replace: true });
         } else {
             setIsAuthenticated(true);
@@ -814,13 +750,19 @@ function AdminDashboard() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            setAdminPassword(getFromLocalStorage('admin_password', DEFAULT_ADMIN_PASSWORD));
-            setAdminOtp(getFromLocalStorage('admin_otp', DEFAULT_ADMIN_OTP));
-            setAdminQuestion(getFromLocalStorage('admin_question', DEFAULT_ADMIN_QUESTION));
-            setAdminAnswer(getFromLocalStorage('admin_answer', DEFAULT_ADMIN_ANSWER));
-            setAdminEmail(getFromLocalStorage('admin_email', DEFAULT_ADMIN_EMAIL));
-            setAdminPhone(getFromLocalStorage('admin_phone', DEFAULT_ADMIN_PHONE));
-            setAdminAddress(getFromLocalStorage('admin_address', DEFAULT_ADMIN_ADDRESS));
+            // Security question, prices and contact details live on the server now
+            ['admin_password', 'admin_otp', 'admin_answer'].forEach((k) => localStorage.removeItem(k));
+            getAdminQuestion().then(setAdminQuestion).catch(() => setAdminQuestion(DEFAULT_ADMIN_QUESTION));
+            setAdminEmail(DEFAULT_ADMIN_EMAIL);
+            setAdminPhone(DEFAULT_ADMIN_PHONE);
+            setAdminAddress(DEFAULT_ADMIN_ADDRESS);
+            getSiteSettings().then((ss) => {
+                if (!ss) return;
+                setPricing(ss.pricing as PricingData);
+                setAdminEmail(ss.contact_email);
+                setAdminPhone(ss.contact_phone);
+                setAdminAddress(ss.contact_address);
+            });
 
             setSelectedDate(new Date());
             
@@ -875,10 +817,11 @@ function AdminDashboard() {
                     
                     if (error.response?.status === 403) {
                         toast({ 
-                            title: 'Permission Denied', 
-                            description: 'Your account lacks Django Admin (is_staff) privileges.', 
+                            title: 'Please sign in again', 
+                            description: 'This session is not an admin session.', 
                             variant: 'destructive' 
                         });
+                        handleLogout();
                     } else if (error.response?.status === 401) {
                         toast({ 
                             title: 'Session Expired', 
@@ -899,7 +842,7 @@ function AdminDashboard() {
             fetchAdminData();
 
             setExplicitVendors(getFromLocalStorage('explicitVendors', []));
-            setPricing(getFromLocalStorage('pricing', defaultPricing));
+            setPricing((prev) => prev ?? defaultPricing);
         }
     }, [isAuthenticated]);
 
@@ -1014,8 +957,30 @@ function AdminDashboard() {
 
     const handleLogout = () => {
         localStorage.removeItem('admin_authenticated');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
         navigate({ to: '/admin/login', replace: true });
     };
+
+    // Re-load listing tables (used when a new listing request arrives)
+    const reloadListings = async () => {
+        try {
+            const allData = await getAdminProperties();
+            const props = allData.filter(p => (p.propertyType as string) !== 'Roommate');
+            const rms: RoommateProfile[] = allData.filter(p => (p.propertyType as string) === 'Roommate').map(listing => ({
+                id: listing.id, propertyType: 'Roommate', ownerName: listing.title, age: 25, rent: listing.rent,
+                city: listing.city, locality: listing.locality, state: listing.state, completeAddress: listing.completeAddress,
+                partialAddress: listing.partialAddress, contactPhonePrimary: listing.contactPhonePrimary,
+                description: listing.description || `Looking for roommate in ${listing.locality}`,
+                preferences: listing.amenities || [], gender: 'Any',
+                images: listing.images?.length ? listing.images : ['https://placehold.co/400x400'],
+                views: listing.views, ownerId: listing.ownerId, hasProperty: true, status: listing.status as any, submittedAt: listing.submittedAt,
+            }));
+            setProperties(props);
+            setRoommates(rms);
+        } catch { /* handled by the main loader */ }
+    };
+    const reviewSummary = useReviewAlerts(isAuthenticated, reloadListings);
 
     const pendingListings = useMemo(() => {
         if (!properties.length && !roommates.length) return [];
@@ -1055,7 +1020,9 @@ function AdminDashboard() {
             }
 
             setDetailsModalOpen(false);
-            toast({ title: "Success", description: `Property has been ${status}.` });
+            toast(status === 'approved'
+                ? { title: "✅ Approved — now live", description: "It shows on the home page and listings immediately." }
+                : { title: "Listing rejected", description: "It stays hidden from the public site." });
         } catch (error) {
             toast({ title: "Error", description: "Failed to update status on server.", variant: "destructive" });
         }
@@ -1088,23 +1055,19 @@ function AdminDashboard() {
         });
     };
 
-    const handleSavePricing = () => {
-        saveToLocalStorage('pricing', pricing);
-        toast({ title: "Pricing Updated", description: "The new prices have been saved." });
+    const handleSavePricing = async () => {
+        if (!pricing) return;
+        try {
+            await updateSiteSettings({ pricing });
+            toast({ title: "Pricing Updated", description: "Every visitor now sees the new prices." });
+        } catch {
+            toast({ title: "Not saved", description: "Could not save prices to the server.", variant: "destructive" });
+        }
     }
-    const handleUpdatePassword = (newPass: string) => {
-        saveToLocalStorage('admin_password', newPass);
-        setAdminPassword(newPass);
-    };
-    const handleUpdatePin = (newPin: string) => {
-        saveToLocalStorage('admin_otp', newPin);
-        setAdminOtp(newPin);
-    };
-    const handleUpdateSecurityQuestion = (newQuestion: string, newAnswer: string) => {
-        saveToLocalStorage('admin_question', newQuestion);
-        saveToLocalStorage('admin_answer', newAnswer);
+    const handleUpdatePassword = (_newPass: string) => {};
+    const handleUpdatePin = (_newPin: string) => {};
+    const handleUpdateSecurityQuestion = (newQuestion: string, _newAnswer: string) => {
         setAdminQuestion(newQuestion);
-        setAdminAnswer(newAnswer);
     };
     const handleOpenAdForm = (ad: Advertisement | null) => {
         setEditingAd(ad);
@@ -1218,9 +1181,8 @@ function AdminDashboard() {
     };
     
     const handleSaveContactInfo = (info: { email: string, phone: string, address: string }) => {
-        saveToLocalStorage('admin_email', info.email);
-        saveToLocalStorage('admin_phone', info.phone);
-        saveToLocalStorage('admin_address', info.address);
+        updateSiteSettings({ contact_email: info.email, contact_phone: info.phone, contact_address: info.address })
+            .catch(() => toast({ title: "Not saved", description: "Could not save contact details to the server.", variant: "destructive" }));
         setAdminEmail(info.email);
         setAdminPhone(info.phone);
         setAdminAddress(info.address);
@@ -1254,8 +1216,13 @@ function AdminDashboard() {
         <div className="bg-slate-50 min-h-screen">
             <header className="bg-white shadow-sm">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 sm:py-2">
-                     <h1 className="text-2xl font-bold text-slate-800">StayFinder Admin</h1>
+                     <h1 className="text-2xl font-bold text-slate-800">SetMyStay Admin</h1>
                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="relative inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-semibold" title="Listing requests waiting for review">
+                            <Bell className="w-4 h-4 text-orange-500" />
+                            {reviewSummary?.pending_count ?? 0} pending
+                            {!!reviewSummary?.pending_count && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-orange-500 animate-ping" />}
+                        </span>
                         <Button asChild>
                             <Link to="/">
                                 <Home className="w-4 h-4 mr-2" />

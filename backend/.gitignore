@@ -1,0 +1,13 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+gcs-keys.json
+staticfiles/
+# Local database and uploaded files — they contain users' personal documents (Aadhaar etc.).
+# Never commit these to GitHub.
+db.sqlite3
+media/
+property_images/
+verification_docs/

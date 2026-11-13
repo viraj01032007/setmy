@@ -25,23 +25,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound, ShieldQuestion, Lock, LogIn, HelpCircle, Home } from 'lucide-react';
 import { LoadingSpinner } from '@/components/icons';
-import { getFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
-// 👇 FIX: Import loginUser for the silent token fetch
-import { loginUser } from '@/lib/api'; 
+import { adminLogin, adminLoginStep, getAdminQuestion } from '@/lib/api';
 import {
   AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-// 🚨 IMPORTANT: Enter your Django Superuser credentials here!
-// This allows the 3FA dashboard to silently grab a valid token for database access.
-const MASTER_DJANGO_USERNAME = "admin"; 
-const MASTER_DJANGO_PASSWORD = "Admin@12345"; 
-
-const DEFAULT_ADMIN_PASSWORD = 'Bluechip@123';
-const DEFAULT_ADMIN_OTP = '16082007';
-const DEFAULT_ADMIN_QUESTION = 'Who are you?';
-const DEFAULT_ADMIN_ANSWER = 'rohan kholi';
+// Admin sign-in is checked by the server (/api/auth/admin-login/).
+// No password, PIN or answer is stored in this file or in the browser any more.
 
 function AdminLoginPage() {
   const navigate = useNavigate();
@@ -54,77 +45,73 @@ function AdminLoginPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isPasswordRevealed, setIsPasswordRevealed] = useState(false);
-
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminOtp, setAdminOtp] = useState('');
   const [adminQuestion, setAdminQuestion] = useState('');
-  const [adminAnswer, setAdminAnswer] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
-    if (localStorage.getItem('admin_authenticated') === 'true') {
+    if (localStorage.getItem('admin_authenticated') === 'true' && localStorage.getItem('access_token')) {
       navigate({ to: '/admin', replace: true });
     }
-    setAdminPassword(getFromLocalStorage('admin_password', DEFAULT_ADMIN_PASSWORD));
-    setAdminOtp(getFromLocalStorage('admin_otp', DEFAULT_ADMIN_OTP));
-    setAdminQuestion(getFromLocalStorage('admin_question', DEFAULT_ADMIN_QUESTION));
-    setAdminAnswer(getFromLocalStorage('admin_answer', DEFAULT_ADMIN_ANSWER));
+    // remove secrets older versions of the site saved in this browser
+    ['admin_password', 'admin_otp', 'admin_answer'].forEach((k) => localStorage.removeItem(k));
+    getAdminQuestion().then(setAdminQuestion).catch(() => setAdminQuestion('Security question'));
   }, [navigate]);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const fail = (msg: string, err?: any) => {
+    const throttled = err?.response?.status === 429;
+    toast({
+      title: throttled ? 'Too many attempts' : 'Authentication Error',
+      description: throttled ? 'Please wait an hour before trying again.' : msg,
+      variant: 'destructive',
+    });
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === adminPassword) {
+    setIsLoading(true);
+    try {
+      await adminLoginStep('password', password);
       toast({ title: 'Step 1 Complete', description: 'Password correct. Please enter your PIN.' });
       setStep('otp');
-    } else {
-      toast({ title: 'Authentication Error', description: 'Incorrect password.', variant: 'destructive' });
+    } catch (err) {
+      fail('Incorrect password.', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp === adminOtp) {
+    setIsLoading(true);
+    try {
+      await adminLoginStep('pin', password, otp);
       toast({ title: 'Step 2 Complete', description: 'PIN correct. Please answer the security question.' });
       setStep('question');
-    } else {
-      toast({ title: 'Authentication Error', description: 'Incorrect PIN.', variant: 'destructive' });
+    } catch (err) {
+      fail('Incorrect PIN.', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    if (answer.toLowerCase() === adminAnswer.toLowerCase()) {
-        try {
-            // 👇 FIX: Silently fetch the master token from Django so the 403 error vanishes!
-            await loginUser({ username: MASTER_DJANGO_USERNAME, password: MASTER_DJANGO_PASSWORD });
-            
-            toast({ title: 'Authentication Successful!', description: 'Redirecting to dashboard...' });
-            localStorage.setItem('admin_authenticated', 'true');
-            navigate({ to: '/admin' });
-        } catch (error) {
-            console.error(error);
-            toast({ 
-                title: 'Database Sync Error', 
-                description: 'Failed to securely link with Django. Check your Master Credentials in the code.', 
-                variant: 'destructive' 
-            });
-            setIsLoading(false);
-        }
-    } else {
-        toast({ title: 'Authentication Error', description: 'Incorrect answer.', variant: 'destructive' });
-        setIsLoading(false);
+    try {
+      const res = await adminLogin(password, otp, answer);
+      localStorage.setItem('admin_authenticated', 'true');
+      localStorage.setItem('panel_user_name', res.name || 'Admin');
+      toast({ title: 'Welcome back!', description: 'Opening your dashboard...' });
+      navigate({ to: '/admin' });
+    } catch (err) {
+      fail('Incorrect answer.', err);
+      setIsLoading(false);
     }
   };
-  
+
   const handleForgotPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (answer.toLowerCase() === adminAnswer.toLowerCase()) {
-        setIsPasswordRevealed(true);
-    } else {
-        toast({ title: 'Verification Error', description: 'Incorrect answer.', variant: 'destructive' });
-    }
+    setIsPasswordRevealed(true);
   };
 
   if (!isMounted) {
@@ -144,7 +131,7 @@ function AdminLoginPage() {
             {step === 'password' && 'Factor 1: Enter your password.'}
             {step === 'otp' && 'Factor 2: Enter your PIN.'}
             {step === 'question' && 'Factor 3: Answer your security question.'}
-            {step === 'forgot_password' && 'Enter your security answer to retrieve your password.'}
+            {step === 'forgot_password' && 'Answer your security question to see how to reset your password.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -248,7 +235,7 @@ function AdminLoginPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     <HelpCircle className="w-4 h-4 mr-2" />
-                    Retrieve Password
+                    Continue
                 </Button>
                 <Button variant="link" type="button" onClick={() => setStep('password')} className="w-full">
                   Back to Login
@@ -261,11 +248,11 @@ function AdminLoginPage() {
       <AlertDialog open={isPasswordRevealed} onOpenChange={setIsPasswordRevealed}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Password Retrieved</AlertDialogTitle>
+                <AlertDialogTitle>Forgot your password?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Your password is: <strong className="font-mono">{adminPassword}</strong>
-                    <br />
-                    Please copy it and use it to log in.
+                    For security, passwords are stored scrambled and can't be shown. Ask the site owner
+                    (the person with access to the server) to reset it from the Django admin
+                    (<span className="font-mono">/admin/management/adminpanelcredential/</span>), or sign in and change it under Settings.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -273,7 +260,7 @@ function AdminLoginPage() {
                     setIsPasswordRevealed(false);
                     setStep('password');
                 }}>
-                    Got it, Back to Login
+                    Back to Login
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

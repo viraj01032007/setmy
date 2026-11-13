@@ -17,7 +17,7 @@ import { AutocompleteInput } from '@/components/shared/autocomplete-input';
 import { indianStates } from '@/lib/states';
 import { allIndianCities, indianCitiesByState, City } from '@/lib/cities';
 import { indianAreas } from '@/lib/areas';
-import { Heart, Filter, LayoutGrid, List, Bell } from 'lucide-react';
+import { Heart, Filter, LayoutGrid, List, Bell, Search, X, ArrowUpDown, RotateCcw } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
@@ -203,6 +203,8 @@ export function ListingsSection({
   const [pageTitle, setPageTitle] = useState('');
   const [pageDescription, setPageDescription] = useState('');
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'relevance' | 'price-asc' | 'price-desc' | 'newest'>('relevance');
   
   useEffect(() => {
     if (initialSearchFilters) {
@@ -279,6 +281,36 @@ export function ListingsSection({
     });
   }, [listings, filters, type]);
 
+  // Quick search + sort on top of the filters
+  const visibleListings = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let items = q
+      ? filteredListings.filter((item) => {
+          const hay = [
+            'title' in item ? item.title : item.ownerName,
+            item.locality, item.city, item.description,
+            ...('amenities' in item ? item.amenities || [] : (item as RoommateProfile).preferences || []),
+          ].join(' ').toLowerCase();
+          return hay.includes(q);
+        })
+      : filteredListings;
+    if (sortBy === 'price-asc') items = [...items].sort((a, b) => a.rent - b.rent);
+    if (sortBy === 'price-desc') items = [...items].sort((a, b) => b.rent - a.rent);
+    if (sortBy === 'newest') items = [...items].sort((a, b) => +new Date(b.submittedAt || 0) - +new Date(a.submittedAt || 0));
+    return items;
+  }, [filteredListings, query, sortBy]);
+
+  const activeChips: { label: string; clear: () => void }[] = [
+    ...(filters.city ? [{ label: filters.city, clear: () => handleFilterChange('city', '') }] : []),
+    ...(filters.locality ? [{ label: filters.locality, clear: () => handleFilterChange('locality', '') }] : []),
+    ...(filters.budget < 100000 ? [{ label: `Under ₹${filters.budget.toLocaleString('en-IN')}`, clear: () => handleFilterChange('budget', 100000) }] : []),
+    ...(filters.furnishedStatus !== 'any' ? [{ label: filters.furnishedStatus, clear: () => handleFilterChange('furnishedStatus', 'any') }] : []),
+    ...(filters.brokerStatus !== 'any' ? [{ label: filters.brokerStatus, clear: () => handleFilterChange('brokerStatus', 'any') }] : []),
+    ...(filters.gender !== 'any' ? [{ label: filters.gender, clear: () => handleFilterChange('gender', 'any') }] : []),
+    ...filters.amenities.map((a) => ({ label: a, clear: () => handleAmenityChange(a, false) })),
+  ];
+  const resetAll = () => { setFilters(initialFilters); setQuery(''); setSortBy('relevance'); };
+
   const filterPanelProps = {
     filters,
     handleFilterChange,
@@ -354,7 +386,28 @@ export function ListingsSection({
                 </SheetContent>
               </Sheet>
             </div>
-            <p className="text-sm text-muted-foreground hidden md:block">{filteredListings.length} results found</p>
+            <div className="relative hidden sm:block flex-1 max-w-sm mx-4">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, area, amenity…" className="h-10 rounded-full pl-9 pr-9" />
+              {query && (
+                <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-10 w-[150px] rounded-full">
+                <ArrowUpDown className="mr-1 h-4 w-4 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relevance">Recommended</SelectItem>
+                <SelectItem value="price-asc">Price: low → high</SelectItem>
+                <SelectItem value="price-desc">Price: high → low</SelectItem>
+                <SelectItem value="newest">Newest first</SelectItem>
+              </SelectContent>
+            </Select>
             <ToggleGroup type="single" value={layout} onValueChange={(value: 'grid' | 'list') => value && setLayout(value)} aria-label="Layout options">
                 <ToggleGroupItem value="grid" aria-label="Grid view">
                     <LayoutGrid className="h-4 w-4" />
@@ -363,24 +416,47 @@ export function ListingsSection({
                     <List className="h-4 w-4" />
                 </ToggleGroupItem>
             </ToggleGroup>
+            </div>
+          </div>
+          <div className="sm:hidden relative mb-4">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, area, amenity…" className="h-11 rounded-full pl-9" />
+          </div>
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-700">{visibleListings.length} {visibleListings.length === 1 ? 'result' : 'results'}</span>
+            {activeChips.map((c) => (
+              <button key={c.label} onClick={c.clear} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
+                {c.label} <X className="h-3 w-3" />
+              </button>
+            ))}
+            {(activeChips.length > 0 || query) && (
+              <button onClick={resetAll} className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                <RotateCcw className="h-3 w-3" /> Reset all
+              </button>
+            )}
           </div>
           <div className={cn(
             "grid gap-6",
             layout === 'grid' ? "sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
           )}>
-            {filteredListings.map(item => {
+            {visibleListings.map((item, i) => {
               const itemType = item.propertyType === 'Roommate' ? 'roommate' : 'listing';
               const isUnlocked = unlockedIds.has(item.id);
-              return itemType === 'roommate' 
-                ? <RoommateCard key={item.id} profile={item as RoommateProfile} onViewDetails={(i) => onViewDetails(i, 'roommate')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />
-                : <PropertyCard key={item.id} listing={item as Listing} onViewDetails={(i) => onViewDetails(i, 'listing')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />
+              return (
+                <div key={item.id} className="animate-page-in" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+                  {itemType === 'roommate'
+                    ? <RoommateCard profile={item as RoommateProfile} onViewDetails={(i) => onViewDetails(i, 'roommate')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />
+                    : <PropertyCard listing={item as Listing} onViewDetails={(i) => onViewDetails(i, 'listing')} isLiked={likedItemIds.has(item.id)} onToggleLike={() => onToggleLike(item.id)} isUnlocked={isUnlocked} />}
+                </div>
+              );
             })}
           </div>
-          {filteredListings.length === 0 && (
-            <div className="text-center py-16 bg-card rounded-xl">
-                <Heart className="mx-auto h-12 w-12 text-muted-foreground" />
+          {visibleListings.length === 0 && (
+            <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Search className="h-8 w-8" /></div>
                 <h3 className="text-xl font-semibold mt-4">No results found</h3>
-                <p className="text-muted-foreground mt-2">Try adjusting your filters to find what you're looking for.</p>
+                <p className="text-muted-foreground mt-2">Try a different area or widen your budget.</p>
+                <Button variant="outline" className="mt-5 rounded-full" onClick={resetAll}><RotateCcw className="mr-2 h-4 w-4" /> Reset filters</Button>
             </div>
           )}
         </main>

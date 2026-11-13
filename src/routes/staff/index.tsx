@@ -31,7 +31,9 @@ import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Listing, RoommateProfile, AnyListing } from '@/lib/types';
 
-import { getAdminProperties, updatePropertyStatus, updateRoommateStatus, deleteProperty, deleteRoommate } from '@/lib/api';
+import { getAdminProperties, updatePropertyStatus, deleteProperty } from '@/lib/api';
+import { useReviewAlerts } from '@/hooks/use-review-alerts';
+import { Bell, Clock, ShieldCheck, RefreshCw } from 'lucide-react';
 
 function StaffDashboard() {
     const navigate = useNavigate();
@@ -83,15 +85,24 @@ function StaffDashboard() {
 
             setProperties(realProperties);
             setRoommates(realRoommates);
-        } catch (error) {
-            console.error("Failed to load listings", error);
+        } catch (error: any) {
+            const code = error?.response?.status;
+            if (code === 401 || code === 403) {
+                toast({ title: 'Session expired', description: 'Please sign in again.', variant: 'destructive' });
+                localStorage.removeItem('staff_authenticated');
+                navigate({ to: '/staff/login', replace: true });
+                return;
+            }
             toast({ title: 'Error', description: 'Could not fetch live listings from database.', variant: 'destructive' });
         }
     };
 
+    const reviewSummary = useReviewAlerts(isAuthenticated, () => fetchListings());
+    const staffName = typeof window !== 'undefined' ? localStorage.getItem('panel_user_name') : null;
+
     useEffect(() => {
         const authStatus = localStorage.getItem('staff_authenticated');
-        if (authStatus !== 'true') {
+        if (authStatus !== 'true' || !localStorage.getItem('access_token')) {
             navigate({ to: '/staff/login', replace: true });
         } else {
             setIsAuthenticated(true);
@@ -101,7 +112,9 @@ function StaffDashboard() {
     
     const handleLogout = () => {
         localStorage.removeItem('staff_authenticated');
-        localStorage.removeItem('access_token'); 
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('panel_user_name');
         navigate({ to: '/staff/login', replace: true });
     };
     
@@ -133,13 +146,11 @@ function StaffDashboard() {
     
     const handleUpdateStatus = async (id: string, type: 'PG' | 'Rental' | 'Roommate', status: 'approved' | 'rejected') => {
         try {
-            if (type === 'Roommate') {
-                await updateRoommateStatus(id, status);
-            } else {
-                await updatePropertyStatus(id, status);
-            }
-            
-            toast({ title: "Status Updated", description: `Listing has been marked as ${status}.` });
+            // Roommate listings are stored as properties too, so one endpoint covers all types
+            await updatePropertyStatus(id, status);
+            toast(status === 'approved'
+                ? { title: "✅ Approved — now live", description: "It's visible on the home page and listings right away." }
+                : { title: "Listing rejected", description: "It stays hidden from the public site." });
             setDetailsModalOpen(false);
             
             fetchListings(); 
@@ -151,11 +162,7 @@ function StaffDashboard() {
 
     const handleDeleteItem = async (id: string, type: 'PG' | 'Rental' | 'Roommate') => {
         try {
-            if (type === 'Roommate') {
-                await deleteRoommate(id);
-            } else {
-                await deleteProperty(id);
-            }
+            await deleteProperty(id);
             
             toast({ title: "Item Deleted", description: `Listing permanently removed.`, variant: 'destructive' });
             setDetailsModalOpen(false);
@@ -243,8 +250,19 @@ function StaffDashboard() {
         <div className="bg-slate-50 min-h-screen">
             <header className="bg-white shadow-sm">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 sm:py-2">
-                     <h1 className="text-2xl font-bold text-slate-800">StayFinder Staff Panel</h1>
+                     <div>
+                        <h1 className="text-2xl font-bold text-slate-800">SetMyStay Staff Panel</h1>
+                        {staffName && <p className="text-sm text-muted-foreground">Signed in as {staffName}</p>}
+                     </div>
                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="relative inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-semibold" title="Pending listing requests">
+                            <Bell className="w-4 h-4 text-orange-500" />
+                            {reviewSummary?.pending_count ?? 0} pending
+                            {!!reviewSummary?.pending_count && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-orange-500 animate-ping" />}
+                        </span>
+                        <Button variant="outline" size="icon" onClick={() => fetchListings()} title="Refresh">
+                            <RefreshCw className="w-4 h-4" />
+                        </Button>
                         <Button asChild>
                             <Link to="/">
                                 <Home className="w-4 h-4 mr-2" />
@@ -260,10 +278,27 @@ function StaffDashboard() {
             </header>
 
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground"><Clock className="w-4 h-4 text-amber-500" /> Waiting for review</p>
+                        <p className="mt-1 text-3xl font-extrabold text-slate-900">{getListingsByStatus('pending').length}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="w-4 h-4 text-emerald-500" /> Live on site</p>
+                        <p className="mt-1 text-3xl font-extrabold text-slate-900">{getListingsByStatus('approved').length}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground"><XCircle className="w-4 h-4 text-rose-500" /> Rejected</p>
+                        <p className="mt-1 text-3xl font-extrabold text-slate-900">{getListingsByStatus('rejected').length}</p>
+                    </div>
+                </div>
+                <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    <b>How it works:</b> new listings arrive here as <b>Pending</b> (you'll hear a chime). Visit or verify the property, then press <b>Approve</b> — it appears on the home page immediately.
+                </p>
                 <Tabs defaultValue="pending">
                     <div className="overflow-x-auto">
                         <TabsList className="mb-8 whitespace-nowrap">
-                            <TabsTrigger value="pending">Pending</TabsTrigger>
+                            <TabsTrigger value="pending">Pending {getListingsByStatus('pending').length > 0 && <span className="ml-2 rounded-full bg-orange-500 px-2 text-xs text-white">{getListingsByStatus('pending').length}</span>}</TabsTrigger>
                             <TabsTrigger value="approved">Approved</TabsTrigger>
                             <TabsTrigger value="rejected">Rejected</TabsTrigger>
                         </TabsList>

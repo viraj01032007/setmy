@@ -27,7 +27,7 @@ import { User, Lock, LogIn, Home } from 'lucide-react';
 import { LoadingSpinner } from '@/components/icons';
 
 // 👇 FIX: Import the real Django login API
-import { loginUser } from '@/lib/api'; 
+import { staffLogin } from '@/lib/api';
 
 function StaffLoginPage() {
   const navigate = useNavigate();
@@ -51,20 +51,21 @@ function StaffLoginPage() {
     setIsLoading(true);
 
     try {
-      // 👇 FIX: Use the real Django database to verify the staff credentials!
-      const response = await loginUser({ 
-        username: userId, 
-        password: password 
-      });
-
+      // Server only accepts accounts the admin created as staff
+      const response = await staffLogin(userId.trim(), password);
       if (response.access) {
-        toast({ title: 'Authentication Successful!', description: 'Redirecting to staff dashboard...' });
+        toast({ title: `Welcome, ${response.name}!`, description: 'Opening the review dashboard...' });
         localStorage.setItem('staff_authenticated', 'true');
+        localStorage.setItem('panel_user_name', response.name || userId);
         navigate({ to: '/staff' });
       }
     } catch (error: any) {
-      console.error("Login failed:", error);
-      toast({ title: 'Authentication Error', description: 'Incorrect User ID or Password.', variant: 'destructive' });
+      const throttled = error?.response?.status === 429;
+      toast({
+        title: throttled ? 'Too many attempts' : 'Authentication Error',
+        description: throttled ? 'Please wait a while before trying again.' : 'Incorrect User ID or Password.',
+        variant: 'destructive',
+      });
       setIsLoading(false);
     }
   };

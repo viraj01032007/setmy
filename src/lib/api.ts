@@ -95,11 +95,26 @@ const adaptRoommateToProfile = (data: any): RoommateProfile => {
   };
 };
 
+// --- PAGINATION HELPER ---
+// The API returns 50 items per page. Earlier code only read page 1, so listings
+// beyond the first page silently disappeared. This follows `next` until done.
+export async function fetchAllPages<T = any>(url: string, params: Record<string, any> = {}): Promise<T[]> {
+  const out: T[] = [];
+  let response = await api.get(url, { params: { page_size: 200, ...params } });
+  for (let guard = 0; guard < 50; guard++) {
+    const data = response.data;
+    if (!data || !Array.isArray(data.results)) return Array.isArray(data) ? data : out;
+    out.push(...data.results);
+    if (!data.next) break;
+    response = await api.get(data.next);
+  }
+  return out;
+}
+
 // --- API CALLS ---
 export const getProperties = async (): Promise<Listing[]> => {
   try {
-    const response = await api.get('/properties/');
-    const rawData = response.data.results ? response.data.results : response.data;
+    const rawData = await fetchAllPages('/properties/');
     return rawData.map(adaptPropertyToListing);
   } catch (error) {
     console.error("Failed to fetch properties:", error);
@@ -107,15 +122,83 @@ export const getProperties = async (): Promise<Listing[]> => {
   }
 };
 
+/** Staff & admin panels: every listing (pending, approved, rejected). Throws if not signed in as staff. */
 export const getAdminProperties = async (): Promise<Listing[]> => {
-  try {
-    const response = await api.get('/properties/?admin=true');
-    const rawData = response.data.results ? response.data.results : response.data;
-    return rawData.map(adaptPropertyToListing);
-  } catch (error) {
-    console.error("Failed to fetch admin properties:", error);
-    return [];
+  const rawData = await fetchAllPages('/properties/', { admin: 'true' });
+  return rawData.map(adaptPropertyToListing);
+};
+
+export interface ReviewSummary {
+  pending_count: number;
+  latest_pending_id: number | null;
+  latest_pending_title: string | null;
+  latest_pending_at: string | null;
+  approved_count: number;
+  rejected_count: number;
+}
+export const getReviewSummary = async (): Promise<ReviewSummary> => {
+  const { data } = await api.get('/properties/review_summary/');
+  return data;
+};
+
+// --- ADMIN / STAFF SIGN-IN (checked on the server; no secrets in this file) ---
+const saveTokens = (data: any) => {
+  if (data?.access) {
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
   }
+};
+export const adminLoginStep = async (step: 'password' | 'pin', password: string, pin = '') => {
+  const { data } = await api.post('/auth/admin-login/', { step, password, pin }, { skipAuthRedirect: true } as any);
+  return data;
+};
+export const adminLogin = async (password: string, pin: string, answer: string) => {
+  const { data } = await api.post('/auth/admin-login/', { password, pin, answer }, { skipAuthRedirect: true } as any);
+  saveTokens(data);
+  return data;
+};
+export const getAdminQuestion = async (): Promise<string> => {
+  const { data } = await api.get('/auth/admin-question/');
+  return data.question;
+};
+export const changeAdminCredentials = async (body: {
+  current_password: string; new_password?: string; new_pin?: string; new_question?: string; new_answer?: string;
+}) => {
+  const { data } = await api.post('/auth/admin-credentials/', body);
+  return data;
+};
+export const staffLogin = async (username: string, password: string) => {
+  const { data } = await api.post('/auth/staff-login/', { username, password }, { skipAuthRedirect: true } as any);
+  saveTokens(data);
+  return data;
+};
+
+// --- SITE SETTINGS (prices & contact details the admin edits; every visitor sees them) ---
+export interface SiteSettings {
+  pricing: { unlocks: { '1': number; '5': number; '10': number; unlimited: number }; listings: { roommate: number; pg: number; rental: number } };
+  contact_email: string;
+  contact_phone: string;
+  contact_address: string;
+}
+export const getSiteSettings = async (): Promise<SiteSettings | null> => {
+  try {
+    const { data } = await api.get('/site-settings/');
+    return data;
+  } catch {
+    return null;
+  }
+};
+export const updateSiteSettings = async (body: Partial<SiteSettings>) => {
+  const { data } = await api.put('/site-settings/', body);
+  return data as SiteSettings;
+};
+
+/** Called after Razorpay checkout succeeds. The server verifies the signature before recording anything. */
+export const verifyPayment = async (body: {
+  razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string; plan_name: string; property_id?: string | null;
+}) => {
+  const { data } = await api.post('/payments/verify-local/', body);
+  return data;
 };
 
 export const getRoommateProperties = async (): Promise<Listing[]> => {
@@ -227,7 +310,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If the error is 401 Unauthorized, and we haven't tried to refresh yet
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (error.response && error.response.status === 401 && !originalRequest._retry && !originalRequest.skipAuthRedirect) {
       originalRequest._retry = true;
 
       try {
@@ -255,20 +338,25 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // If the refresh token is ALSO expired, force a hard logout
+        // Refresh token expired too → sign out, and send panel users back to *their* login page.
         if (typeof window !== 'undefined') {
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('setmystay_isLoggedIn');
           localStorage.removeItem('admin_authenticated');
-          window.location.href = '/admin/login'; 
+          localStorage.removeItem('staff_authenticated');
+          const path = window.location.pathname;
+          if (!originalRequest.skipAuthRedirect) {
+            if (path.startsWith('/admin') && path !== '/admin/login') window.location.href = '/admin/login';
+            else if (path.startsWith('/staff') && path !== '/staff/login') window.location.href = '/staff/login';
+          }
         }
       }
     }
     
     // Log if the user's token is valid, but they aren't an admin (403 Forbidden)
     if (error.response && error.response.status === 403) {
-        console.error("403 Forbidden: The logged-in account does not have is_staff=True in Django.");
+        console.warn("403 Forbidden:", originalRequest?.url);
     }
 
     return Promise.reject(error);

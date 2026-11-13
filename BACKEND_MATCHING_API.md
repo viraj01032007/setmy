@@ -1,7 +1,7 @@
 # Roommate Match — backend endpoints (Django)
 
 The frontend for Tinder-style roommate matching is complete (`src/lib/matching.ts`, `src/components/roommates/*`).
-Until these endpoints exist, it runs in **preview mode**: everything is stored in the browser and sample profiles are shown with a "Sample" badge.
+These endpoints are now implemented in `backend/matching/`. Until the new backend is deployed, the site runs in **preview mode**: everything is stored in the browser and sample profiles are shown with a "Sample" badge.
 
 As soon as `GET /api/roommates/quota/` responds (200 or 401), the frontend switches to the real API automatically.
 You can force a mode with `VITE_MATCHING_MODE=api` or `VITE_MATCHING_MODE=demo` in `.env`.

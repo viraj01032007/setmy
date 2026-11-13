@@ -18,7 +18,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import type { Listing, RoommateProfile, Page, ListingType, UnlockPlan, Bed, Advertisement, Coupon, Purchase, AnyListing, PricingData, FilterState } from "@/lib/types";
 import { defaultPricing } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { getProperties, toggleFavoriteProperty, getCoupons, getAdvertisements, createListing } from "@/lib/api";
+import { getProperties, toggleFavoriteProperty, getCoupons, getAdvertisements, createListing, getSiteSettings } from "@/lib/api";
 
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -170,7 +170,9 @@ function Home() {
 
       fetchData(); 
       
-      setPricing(getFromLocalStorage('pricing', defaultPricing));
+      // Prices are set by the admin on the server; fall back to defaults if offline
+      setPricing(defaultPricing);
+      getSiteSettings().then((ss) => { if (ss?.pricing) setPricing(ss.pricing as PricingData); });
       
       const allUserData: any = getFromLocalStorage('setmystay_user_data', {});
       const userData = loggedInStatus ? (allUserData.defaultUser || defaultUserState) : defaultUserState;

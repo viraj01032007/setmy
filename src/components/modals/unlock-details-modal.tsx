@@ -104,10 +104,12 @@ export function UnlockDetailsModal({ isOpen, onClose, onPlanSelect, onNavigateTo
 
                     // 2. Also notify backend
                     try {
-                        await axios.post('/payments/verify-local/', {
+                        // was axios.post('/payments/...') which hit the website instead of the backend
+                        await api.post('/payments/verify-local/', {
                             property_id: null,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
                             plan_name: selectedPlan.title,
                             amount: finalAmount,
                         });
