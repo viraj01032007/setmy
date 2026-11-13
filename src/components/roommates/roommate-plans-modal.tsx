@@ -77,9 +77,9 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, onActivated, 
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <RazorpayScript />
       <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-0">
-        <div className="bg-ink px-6 pt-7 pb-6 text-white rounded-t-3xl">
+        <div className="bg-[#0a1a33] px-6 pt-7 pb-6 text-white rounded-t-3xl">
           <DialogHeader className="text-left">
-            <DialogTitle className="font-display text-2xl font-extrabold text-white">{title}</DialogTitle>
+            <DialogTitle className="text-2xl font-extrabold text-white">{title}</DialogTitle>
             <DialogDescription className="text-slate-300">{desc}</DialogDescription>
           </DialogHeader>
         </div>

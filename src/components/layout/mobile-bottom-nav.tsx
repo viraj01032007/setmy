@@ -38,7 +38,7 @@ export function MobileBottomNav({ activePage, onNavigate, roommateBadge = 0 }: P
               aria-current={active ? "page" : undefined}
             >
               {isMatch ? (
-                <span className={cn("-mt-6 flex h-12 w-12 items-center justify-center rounded-full shadow-lg ring-4 ring-white", active ? "bg-tolet text-ink" : "bg-ink text-tolet")}>
+                <span className={cn("-mt-6 flex h-12 w-12 items-center justify-center rounded-full shadow-lg ring-4 ring-white", active ? "bg-[#065af3] text-white" : "bg-gradient-to-r from-[#53b2fe] to-[#065af3] text-white")}>
                   <Icon className="h-6 w-6 fill-current" />
                 </span>
               ) : (

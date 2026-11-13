@@ -55,7 +55,7 @@ export function ProfileVisual({ profile, className, initialsClass }: { profile: 
   const initials = profile.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className={cn("relative h-full w-full flex items-center justify-center overflow-hidden", gradientFor(profile.id), className)}>
-      <span className={cn("relative font-display font-extrabold text-white tracking-tight text-7xl", initialsClass)}>{initials}</span>
+      <span className={cn("relative font-extrabold text-white tracking-tight text-7xl", initialsClass)}>{initials}</span>
     </div>
   );
 }

@@ -14,7 +14,7 @@ export function FloatingCta({ onGameClick }: FloatingCtaProps) {
             <Button 
                 onClick={onGameClick} 
                 size="icon" 
-                className="rounded-full bg-tolet hover:bg-tolet/90 text-ink border-2 border-ink w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center"
+                className="rounded-full bg-[#ff6d38] hover:bg-[#ff7a1a] text-white w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center"
             >
                 <Gift className="w-5 h-5" />
                 <span className="sr-only">Play to Win</span>

@@ -44,7 +44,7 @@ export function ContactFab() {
                 >
                     <Button
                         size="icon"
-                        className="rounded-full bg-ink hover:bg-ink/90 text-white w-11 h-11 shadow-md flex items-center justify-center"
+                        className="rounded-full bg-[#0a1a33] hover:bg-[#065af3] text-white w-11 h-11 shadow-md flex items-center justify-center"
                         aria-label="Email Us"
                     >
                         <Mail className="w-6 h-6" />
@@ -54,7 +54,7 @@ export function ContactFab() {
                 <Button
                     onClick={() => setIsOpen(!isOpen)}
                     size="icon"
-                    className="rounded-full bg-ink hover:bg-ink/90 text-white w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center transition-transform duration-300"
+                    className="rounded-full bg-[#0a1a33] hover:bg-[#065af3] text-white w-11 h-11 sm:w-12 sm:h-12 shadow-md flex items-center justify-center transition-transform duration-300"
                     style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}
                 >
                     <Plus className="w-5 h-5" />

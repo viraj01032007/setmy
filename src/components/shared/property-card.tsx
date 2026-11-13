@@ -26,7 +26,7 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
 
   return (
     <div 
-      className="bg-card rounded-lg overflow-hidden border border-slate-200 hover:border-ink transition-colors group cursor-pointer h-full flex flex-col"
+      className="bg-card rounded-lg overflow-hidden border border-slate-200 hover:border-[#0a1a33] transition-colors group cursor-pointer h-full flex flex-col"
       onClick={() => onViewDetails(listing)}
     >
       <div className="relative h-48 w-full flex-shrink-0">
@@ -63,7 +63,7 @@ export function PropertyCard({ listing, onViewDetails, isLiked, onToggleLike, is
         </Button>
       </div>
       <div className="p-4 space-y-3 flex-grow flex flex-col">
-        <h3 className="font-display text-lg font-bold text-ink truncate">{listing.title}</h3>
+        <h3 className="text-lg font-bold text-slate-900 truncate">{listing.title}</h3>
         
         <div className="flex items-center text-muted-foreground text-sm">
           <MapPin className="w-4 h-4 mr-2" />

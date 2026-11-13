@@ -114,7 +114,7 @@ export function Header({
            <Avatar className="h-10 w-10">
              {/* 👇 Injecting the Google Picture and Name here! */}
              {userPic && <AvatarImage src={userPic} alt={userName || "User"} />}
-             <AvatarFallback className="bg-ink font-semibold text-tolet">{userName ? userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+             <AvatarFallback className="bg-[#008cff] font-semibold text-white">{userName ? userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
            </Avatar>
          </Button>
        </DropdownMenuTrigger>

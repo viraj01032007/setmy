@@ -238,7 +238,7 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
       {/* Title */}
       <div className="mb-4 sm:mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-ink">Find a flatmate</h1>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900">Find a flatmate</h1>
           <p className="mt-2 hidden sm:block text-muted-foreground">Swipe right if you'd share a home. When they say yes too, you can chat.</p>
         </div>
         {quota && (
@@ -399,9 +399,9 @@ export function RoommatesSection({ roommates, isLoggedIn, onRequireAuth, browse,
               </div>
               <MessageCircle className="h-8 w-8 text-orange-500" />
             </button>
-            <div className="rounded-3xl bg-ink p-5 text-white">
-              <p className="font-display text-lg font-bold">How it works</p>
-              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300 marker:text-tolet">
+            <div className="rounded-3xl bg-[#0a1a33] p-5 text-white">
+              <p className="text-lg font-bold">How it works</p>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300 marker:text-[#53b2fe]">
                 <li>Swipe right on people you'd live with</li>
                 <li>They get your request</li>
                 <li>If they accept, chat opens</li>

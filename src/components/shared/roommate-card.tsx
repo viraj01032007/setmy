@@ -26,7 +26,7 @@ export function RoommateCard({ profile, onViewDetails, isLiked, onToggleLike, is
 
   return (
     <div 
-      className="bg-card rounded-lg overflow-hidden border border-slate-200 hover:border-ink transition-colors group cursor-pointer h-full flex flex-col"
+      className="bg-card rounded-lg overflow-hidden border border-slate-200 hover:border-[#0a1a33] transition-colors group cursor-pointer h-full flex flex-col"
       onClick={() => onViewDetails(profile)}
     >
       <div className="relative h-48 w-full flex-shrink-0">
