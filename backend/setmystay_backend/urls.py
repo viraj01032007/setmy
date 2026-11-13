@@ -3,7 +3,6 @@ import os
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -13,8 +12,15 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if getattr(settings, 'MEDIA_ROOT', None):
+    # Serve uploaded listing photos/videos and ad images when stored on local disk.
+    # Identity documents (verification_docs/) are deliberately NOT served publicly.
+    from django.urls import re_path
+    from django.views.static import serve
+    urlpatterns += [
+        re_path(r'^media/(?P<path>(property_images|property_videos|advertisements)/.+)$', serve,
+                {'document_root': settings.MEDIA_ROOT}),
+    ]
 
 # --- STARTUP SEED (safe) ---
 # Previously this reset two superusers to a password written in the code on every boot.

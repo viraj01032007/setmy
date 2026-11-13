@@ -32,6 +32,25 @@ from .serializers import (
 )
 
 
+def store_public_file(upload, folder, resource_type='image'):
+    """
+    Saves an uploaded photo/video and returns its public URL.
+    Uses Cloudinary when CLOUDINARY_URL is configured (Render's free disk is wiped on every restart),
+    otherwise falls back to Django's default storage (local disk or Google Cloud Storage).
+    """
+    import os
+    if os.environ.get('CLOUDINARY_URL'):
+        import cloudinary.uploader
+        result = cloudinary.uploader.upload(upload, folder=f'setmystay/{folder}', resource_type=resource_type)
+        return result['secure_url']
+    path = default_storage.save(f'{folder}/{upload.name}', ContentFile(upload.read()))
+    url = default_storage.url(path)
+    if url.startswith('/'):
+        # make local URLs absolute so the website (different domain) can load them
+        url = f"{os.environ.get('PUBLIC_BACKEND_URL', '').rstrip('/')}{url}"
+    return url
+
+
 def get_razorpay_client():
     return razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
@@ -85,12 +104,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # 1. Save main property data with status='PENDING' — it appears in the staff & admin review queue
         property_instance = serializer.save(owner=self.request.user, status='PENDING')
 
-        # 2. Safely save Images to Cloud/Local
+        # 2. Save images: Cloudinary if CLOUDINARY_URL is set (survives restarts), else default storage
         try:
             images = self.request.FILES.getlist('uploaded_images')
             for image in images:
-                file_path = default_storage.save(f'property_images/{image.name}', ContentFile(image.read()))
-                full_image_url = default_storage.url(file_path)
+                full_image_url = store_public_file(image, 'property_images')
                 ListingImage.objects.create(property=property_instance, image_url=full_image_url, is_video=False)
         except Exception as e:
             print("Image upload fallback:", e)
@@ -105,8 +123,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         try:
             video_file = self.request.FILES.get('uploaded_video')
             if video_file:
-                video_path = default_storage.save(f'property_videos/{video_file.name}', ContentFile(video_file.read()))
-                full_video_url = default_storage.url(video_path)
+                full_video_url = store_public_file(video_file, 'property_videos', resource_type='video')
                 ListingImage.objects.create(property=property_instance, image_url=full_video_url, is_video=True)
         except Exception as e:
             print("Video upload fallback:", e)
