@@ -113,8 +113,8 @@ export function Header({
          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
            <Avatar className="h-10 w-10">
              {/* 👇 Injecting the Google Picture and Name here! */}
-             <AvatarImage src={userPic || "https://placehold.co/100x100/4582EF/FFFFFF.png"} alt={userName || "User"} />
-             <AvatarFallback>{userName ? userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+             {userPic && <AvatarImage src={userPic} alt={userName || "User"} />}
+             <AvatarFallback className="bg-ink font-semibold text-tolet">{userName ? userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
            </Avatar>
          </Button>
        </DropdownMenuTrigger>

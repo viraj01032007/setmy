@@ -84,6 +84,8 @@ export function HomeSection({
   }, [allListings]);
 
   const coupon = coupons.find((c) => c.isActive);
+  // Real photo from the newest approved listing (no stock skyline)
+  const heroListing = allListings.find((l) => l.images?.[0] && !l.images[0].includes("placehold.co"));
 
   const copyCode = (code: string) => {
     navigator.clipboard?.writeText(code);
@@ -179,19 +181,35 @@ export function HomeSection({
             </form>
           </div>
 
-          <figure className="relative hidden lg:block">
-            <img
-              src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1600&auto=format&fit=crop"
-              alt="Apartment buildings at dusk"
-              fetchPriority="high"
-              className="aspect-[4/5] w-full rounded-lg object-cover"
-            />
-            <figcaption className="mt-3 text-sm text-slate-500">
-              {allListings.length > 0
-                ? `${allListings.length} verified ${allListings.length === 1 ? "listing" : "listings"} live right now.`
-                : "New listings are added as soon as our team verifies them."}
-            </figcaption>
-          </figure>
+          {heroListing ? (
+            <figure className="hidden lg:block">
+              <button onClick={() => onViewDetails(heroListing, "listing")} className="block w-full text-left">
+                <img
+                  src={heroListing.images[0]}
+                  alt={heroListing.title}
+                  fetchPriority="high"
+                  className="aspect-[4/5] w-full rounded-lg object-cover"
+                />
+              </button>
+              <figcaption className="mt-3 text-sm text-slate-600">
+                Just listed: <span className="font-semibold text-ink">{heroListing.title}</span>, {heroListing.locality}.
+                {" "}₹{heroListing.rent.toLocaleString("en-IN")} a month.
+              </figcaption>
+            </figure>
+          ) : (
+            <aside className="hidden rounded-lg bg-concrete p-10 lg:block">
+              <p className="font-display text-3xl font-bold leading-tight">
+                Have a spare room in Vashi, Nerul or Kharghar?
+              </p>
+              <p className="mt-4 text-slate-600">
+                Students and young professionals are looking right now. Add your place with photos and documents, and
+                our team will put it live once it's checked.
+              </p>
+              <Button onClick={() => onNavigate("list")} className="mt-6 h-11 rounded-md px-5 font-semibold">
+                List your property
+              </Button>
+            </aside>
+          )}
         </div>
       </section>
 
