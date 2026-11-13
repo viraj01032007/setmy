@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useNavigate } from "@tanstack/react-router";
 import { RazorpayScript } from "@/components/razorpay-script";
+import { startCheckout } from "@/lib/razorpay";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -49,27 +50,18 @@ export function ListPropertyPaymentModal({
 
     setTimeout(async () => {
       try {
-        const { data } = await api.post('/payments/create-order/', {
-          amount: amount,
-          property_id: propertyId || null,
-          plan_name: 'Property Listing Fee',
-        });
+        await startCheckout({
+          amount,
+          planName: 'Property Listing Fee',
+          propertyId: propertyId || null,
+          prefill: {
+            name: (typeof window !== 'undefined' && localStorage.getItem('user_name')) || userName,
+            email: userEmail,
+          },
+          onSuccess: async (response) => {
+            toast({ title: "Payment Successful!", description: "Submitting your listing for approval..." });
 
-        const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-          amount: data.amount,
-          currency: data.currency || 'INR',
-          name: 'SetMyStay',
-          description: 'Property Listing Fee',
-          order_id: data.order_id,
-          handler: async function (response: any) {
-            toast({
-              title: "Payment Successful!",
-              description: "Submitting your listing for approval...",
-              variant: "default",
-            });
-
-            // 1. If parent passed a callback to create the listing after payment, run it now!
+            // 1. Create the listing now that payment went through
             if (onProceedToPayment) {
               try {
                 await onProceedToPayment({ title: 'Property Listing Fee', price: amount });
@@ -78,7 +70,7 @@ export function ListPropertyPaymentModal({
               }
             }
 
-            // 2. Verify payment & record in Purchase History on backend
+            // 2. Server verifies the Razorpay signature and records the purchase
             try {
               await api.post('/payments/verify-local/', {
                 property_id: propertyId || null,
@@ -86,62 +78,35 @@ export function ListPropertyPaymentModal({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
                 plan_name: 'Property Listing Fee',
-                amount: amount,
               });
             } catch (e) {
               console.warn("Verification warning:", e);
             }
 
-            // 3. Also save to localStorage purchase history so HistoryModal shows it immediately
+            // 3. Local history so the History modal shows it immediately
             try {
               const existing = JSON.parse(localStorage.getItem('setmystay_purchase_history') || '[]');
-              const newPurchase = {
-                id: response.razorpay_payment_id || `pur_${Date.now()}`,
-                plan: 'Property Listing Fee',
-                plan_name: 'Property Listing Fee',
-                date: new Date().toISOString(),
-                created_at: new Date().toISOString(),
-                amount: amount,
-              };
-              localStorage.setItem('setmystay_purchase_history', JSON.stringify([newPurchase, ...existing]));
+              const now = new Date().toISOString();
+              localStorage.setItem('setmystay_purchase_history', JSON.stringify([
+                { id: response.razorpay_payment_id, plan: 'Property Listing Fee', plan_name: 'Property Listing Fee', date: now, created_at: now, amount },
+                ...existing,
+              ]));
             } catch (e) {
               console.error(e);
             }
 
-            toast({
-              title: "Listing Submitted!",
-              description: "Your property has been submitted for admin approval.",
-            });
+            toast({ title: "Listing Submitted!", description: "Our team will review it shortly — you'll see it live once approved." });
             setIsProcessing(false);
             navigate({ to: "/" });
           },
-          prefill: {
-            name: (typeof window !== 'undefined' && localStorage.getItem('user_name')) || userName,
-            email: userEmail,
+          onFailure: (message) => {
+            toast({ title: "Payment Failed", description: message, variant: "destructive" });
+            setIsProcessing(false);
           },
-          theme: {
-            color: '#2563eb', 
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (response: any) {
-          toast({
-            title: "Payment Failed",
-            description: response.error?.description || "Transaction was declined.",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
+          onDismiss: () => setIsProcessing(false),
         });
-
-        rzp.open();
       } catch (error: any) {
-        console.error("Payment Initialization Failed:", error);
-        toast({
-          title: "Payment Gateway Error",
-          description: error?.response?.data?.error || "Could not initialize payment gateway.",
-          variant: "destructive",
-        });
+        toast({ title: "Payment Gateway Error", description: error?.message || "Could not start the payment.", variant: "destructive" });
         setIsProcessing(false);
       }
     }, 400);

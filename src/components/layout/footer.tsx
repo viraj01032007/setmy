@@ -5,15 +5,16 @@ import { Link } from "@tanstack/react-router";
 import { Logo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone } from "lucide-react";
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Page } from "@/lib/types";
-import { getFromLocalStorage } from "@/lib/storage";
+import { getSiteSettings } from "@/lib/api";
+import { CONTACT_PHONE_DISPLAY, whatsappLink } from "@/lib/contact";
 
 
 // Default contact info for the very first run or if not set
 const DEFAULT_ADMIN_EMAIL = 'setmystay02@gmail.com';
-const DEFAULT_ADMIN_PHONE = '+918210552902';
+const DEFAULT_ADMIN_PHONE = '+917977169550';
 const DEFAULT_ADMIN_ADDRESS = 'Office no. 01, Neelsidhi Splendour, Sector 15, CBD Belapur, Navi Mumbai, Maharashtra 400614';
 
 
@@ -30,9 +31,13 @@ export function Footer({ onNavigate }: FooterProps) {
 
   useEffect(() => {
     setIsMounted(true);
-    setContactEmail(getFromLocalStorage('admin_email', DEFAULT_ADMIN_EMAIL));
-    setContactPhone(getFromLocalStorage('admin_phone', DEFAULT_ADMIN_PHONE));
-    setContactAddress(getFromLocalStorage('admin_address', DEFAULT_ADMIN_ADDRESS));
+    // Contact details come from the server (Admin → Settings), so every visitor sees the same ones
+    getSiteSettings().then((ss) => {
+      if (!ss) return;
+      setContactEmail(ss.contact_email || DEFAULT_ADMIN_EMAIL);
+      setContactPhone(ss.contact_phone || DEFAULT_ADMIN_PHONE);
+      setContactAddress(ss.contact_address || DEFAULT_ADMIN_ADDRESS);
+    });
   }, []);
 
 
@@ -85,7 +90,11 @@ export function Footer({ onNavigate }: FooterProps) {
               </a>
               <a href={`tel:${contactPhone}`} className="flex items-center gap-2 hover:text-white">
                 <Phone className="w-4 h-4" />
-                <span>{contactPhone}</span>
+                <span>{contactPhone === DEFAULT_ADMIN_PHONE ? CONTACT_PHONE_DISPLAY : contactPhone}</span>
+              </a>
+              <a href={whatsappLink()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white">
+                <MessageCircle className="w-4 h-4 text-green-400" />
+                <span>Chat on WhatsApp</span>
               </a>
             </div>
           </div>

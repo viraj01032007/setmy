@@ -338,6 +338,11 @@ class CreateRazorpayOrderView(APIView):
 
         if not amount:
             return Response({"error": "Amount is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not (settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET):
+            return Response(
+                {"error": "Payments aren't set up yet: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         try:
             client = get_razorpay_client()

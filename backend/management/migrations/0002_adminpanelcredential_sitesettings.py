@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('pricing', models.JSONField(default=management.models.default_pricing)),
                 ('contact_email', models.CharField(default='setmystay02@gmail.com', max_length=255)),
-                ('contact_phone', models.CharField(default='+918210552902', max_length=30)),
+                ('contact_phone', models.CharField(default='+917977169550', max_length=30)),
                 ('contact_address', models.TextField(default='Office no. 01, Neelsidhi Splendour, Sector 15, CBD Belapur, Navi Mumbai, Maharashtra 400614')),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],

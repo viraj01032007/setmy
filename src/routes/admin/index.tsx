@@ -56,7 +56,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 // Default credentials for the very first run
 const DEFAULT_ADMIN_QUESTION = 'Who are you?';
 const DEFAULT_ADMIN_EMAIL = 'setmystay02@gmail.com';
-const DEFAULT_ADMIN_PHONE = '+918210552902';
+const DEFAULT_ADMIN_PHONE = '+917977169550';
 const DEFAULT_ADMIN_ADDRESS = 'Office no. 01, Neelsidhi Splendour, Sector 15, CBD Belapur, Navi Mumbai, Maharashtra 400614';
 
 // Chart data generation functions

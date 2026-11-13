@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { RazorpayScript } from "@/components/razorpay-script";
 import { useToast } from "@/hooks/use-toast";
-import api from "@/lib/api";
+import { startCheckout } from "@/lib/razorpay";
 import { cn } from "@/lib/utils";
 import { ROOMMATE_PLANS, activatePlan, type PlanId, type Quota, type RoommatePlan } from "@/lib/matching";
 
@@ -43,30 +43,17 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, demoMode, onA
       return;
     }
 
-    try {
-      const { data } = await api.post("/payments/create-order/", {
-        amount: plan.price,
-        property_id: null,
-        plan_name: `Roommate ${plan.name}`,
-      });
-      onClose();
-      // Give the Radix dialog time to release its focus trap before Razorpay opens.
-      window.setTimeout(() => {
-        const rzp = new (window as any).Razorpay({
-          key: data.razorpay_key || import.meta.env.VITE_RAZORPAY_KEY_ID,
-          amount: data.amount,
-          currency: data.currency,
-          name: "SetMyStay",
+    onClose();
+    // Give the dialog time to release its focus trap before Razorpay opens.
+    window.setTimeout(async () => {
+      try {
+        await startCheckout({
+          amount: plan.price,
+          planName: `Roommate ${plan.name}`,
           description: `Roommate ${plan.name} — 1 month`,
-          order_id: data.order_id,
-          theme: { color: "#1d4ed8" },
-          handler: async (response: any) => {
+          onSuccess: async (response) => {
             try {
-              const quota = await activatePlan(plan.id, {
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-              });
+              const quota = await activatePlan(plan.id, response);
               toast({ title: `Welcome to ${plan.name}! 🎉`, description: "Your swipes have been topped up." });
               onActivated(quota);
             } catch {
@@ -77,15 +64,14 @@ export function RoommatePlansModal({ isOpen, onClose, currentPlan, demoMode, onA
               });
             }
           },
+          onFailure: (message) => toast({ title: "Payment failed", description: message, variant: "destructive" }),
         });
-        rzp.on("payment.failed", () => toast({ title: "Payment failed", description: "No money was deducted. Please try again.", variant: "destructive" }));
-        rzp.open();
+      } catch (err: any) {
+        toast({ title: "Payment Gateway Error", description: err?.message || "Could not start the payment.", variant: "destructive" });
+      } finally {
         setBusy(null);
-      }, 350);
-    } catch {
-      setBusy(null);
-      toast({ title: "Couldn't start payment", description: "Please check your connection and try again.", variant: "destructive" });
-    }
+      }
+    }, 350);
   };
 
   const title =

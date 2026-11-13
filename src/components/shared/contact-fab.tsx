@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Plus, X, Mail, MessageCircle } from 'lucide-react';
 import { Link } from "@tanstack/react-router";
 import { cn } from '@/lib/utils';
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 
 export function ContactFab() {
     const [isOpen, setIsOpen] = useState(false);
 
     const emailAddress = "setmystay02@gmail.com";
-    const whatsappNumber = "918210552902";
+    const whatsappNumber = WHATSAPP_NUMBER;
     const whatsappMessage = "Hello, I have a question about SetMyStay.";
 
     return (

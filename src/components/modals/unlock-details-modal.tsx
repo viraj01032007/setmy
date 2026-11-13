@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { RazorpayScript } from "@/components/razorpay-script";
+import { startCheckout } from "@/lib/razorpay";
 import api, { getCoupons } from "@/lib/api"; // Uses your configured Axios instance with JWT interceptors
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -70,98 +71,49 @@ export function UnlockDetailsModal({ isOpen, onClose, onPlanSelect, onNavigateTo
     // Wait 400ms for Radix UI animations/locks to clear before opening Razorpay
     setTimeout(async () => {
       try {
-        // Uses `api` from @/lib/api so baseURL and Bearer token are automatically attached
-        const { data } = await api.post('/payments/create-order/', {
-          amount: finalAmount, 
-          property_id: null,
-          plan_name: currentPlan.title
-        });
-
-        const options = {
-          // Uses the key returned by Django first, falling back to Next.js env variable
-          key: data.razorpay_key || import.meta.env.VITE_RAZORPAY_KEY_ID,
-          amount: data.amount,
-          currency: data.currency,
-          name: 'SetMyStay',
-          description: currentPlan.title,
-          order_id: data.order_id,
-          handler: async function (response: any) {
-                    // 1. Save to localStorage purchase history immediately
-                    try {
-                        const existing = JSON.parse(localStorage.getItem('setmystay_purchase_history') || '[]');
-                        const newPurchase = {
-                            id: response.razorpay_payment_id || `pur_${Date.now()}`,
-                            plan: selectedPlan.title,
-                            plan_name: selectedPlan.title,
-                            date: new Date().toISOString(),
-                            created_at: new Date().toISOString(),
-                            amount: finalAmount,
-                        };
-                        localStorage.setItem('setmystay_purchase_history', JSON.stringify([newPurchase, ...existing]));
-                    } catch (e) {
-                        console.error(e);
-                    }
-
-                    // 2. Also notify backend
-                    try {
-                        // was axios.post('/payments/...') which hit the website instead of the backend
-                        await api.post('/payments/verify-local/', {
-                            property_id: null,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_signature: response.razorpay_signature,
-                            plan_name: selectedPlan.title,
-                            amount: finalAmount,
-                        });
-                    } catch (e) {
-                        console.warn("History sync warning:", e);
-                    }
-
-                    toast({
-                        title: "Payment Successful!",
-                        description: `Your ${selectedPlan.title} is now active!`,
-                        variant: "default",
-                    });
-
-                    onPlanSelect({ plan: selectedPlan.plan, title: selectedPlan.title, price: finalAmount });
-                },
-          prefill: {
-            name: "SetMyStay User",
-            email: "user@setmystay.com",
-          },
-          theme: { color: '#2563eb' },
-          modal: {
-            ondismiss: function () {
-              setSelectedPlan(null);
+        await startCheckout({
+          amount: finalAmount,
+          planName: currentPlan.title,
+          onSuccess: async (response) => {
+            // 1. Local history so the History modal updates immediately
+            try {
+              const existing = JSON.parse(localStorage.getItem('setmystay_purchase_history') || '[]');
+              const now = new Date().toISOString();
+              localStorage.setItem('setmystay_purchase_history', JSON.stringify([
+                { id: response.razorpay_payment_id, plan: currentPlan.title, plan_name: currentPlan.title, date: now, created_at: now, amount: finalAmount },
+                ...existing,
+              ]));
+            } catch (e) {
+              console.error(e);
             }
-          }
-        };
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', function (response: any) {
-          toast({
-            title: "Payment Failed",
-            description: response.error.description,
-            variant: "destructive",
-          });
-          setSelectedPlan(null);
+            // 2. Server verifies the Razorpay signature and records the purchase
+            try {
+              await api.post('/payments/verify-local/', {
+                property_id: null,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                plan_name: currentPlan.title,
+              });
+            } catch (e) {
+              console.warn("History sync warning:", e);
+            }
+
+            toast({ title: "Payment Successful!", description: `Your ${currentPlan.title} is now active!` });
+            onPlanSelect({ plan: currentPlan.plan, title: currentPlan.title, price: finalAmount });
+          },
+          onFailure: (message) => {
+            toast({ title: "Payment Failed", description: message, variant: "destructive" });
+            setSelectedPlan(null);
+          },
+          onDismiss: () => setSelectedPlan(null),
         });
-        rzp.open();
-
       } catch (error: any) {
-        console.error("Payment Error", error);
-        const errorMsg = error.response?.status === 401 
-          ? "Please sign in before purchasing a plan." 
-          : "Could not initialize payment gateway. Check backend connection.";
-        
-        toast({
-          title: "Error",
-          description: errorMsg,
-          variant: "destructive",
-        });
+        toast({ title: "Payment Gateway Error", description: error?.message || "Could not start the payment.", variant: "destructive" });
         setSelectedPlan(null);
       }
-    }, 400); 
+    }, 400);
   };
   
   return (

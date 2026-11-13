@@ -57,7 +57,7 @@ class SiteSettings(models.Model):
     """Singleton for things the admin edits once and every visitor sees (prices, contact details)."""
     pricing = models.JSONField(default=default_pricing)
     contact_email = models.CharField(max_length=255, default='setmystay02@gmail.com')
-    contact_phone = models.CharField(max_length=30, default='+918210552902')
+    contact_phone = models.CharField(max_length=30, default='+917977169550')
     contact_address = models.TextField(
         default='Office no. 01, Neelsidhi Splendour, Sector 15, CBD Belapur, Navi Mumbai, Maharashtra 400614'
     )
