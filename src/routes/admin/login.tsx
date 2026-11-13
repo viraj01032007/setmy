@@ -58,12 +58,23 @@ function AdminLoginPage() {
   }, [navigate]);
 
   const fail = (msg: string, err?: any) => {
-    const throttled = err?.response?.status === 429;
-    toast({
-      title: throttled ? 'Too many attempts' : 'Authentication Error',
-      description: throttled ? 'Please wait an hour before trying again.' : msg,
-      variant: 'destructive',
-    });
+    const code = err?.response?.status;
+    let title = 'Authentication Error';
+    let description = msg;
+    if (code === 429) {
+      title = 'Too many attempts';
+      description = 'Please wait an hour before trying again.';
+    } else if (!err?.response) {
+      title = "Can't reach the server";
+      description = 'The backend is offline or still starting up (free Render servers take ~1 minute). Try again shortly.';
+    } else if (code === 404 || code === 405) {
+      title = 'Backend not updated yet';
+      description = 'The server is still running the old code without the new admin login. Redeploy the backend from the repo\'s backend/ folder, then try again.';
+    } else if (code >= 500) {
+      title = 'Server error';
+      description = `The server hit an error (${code}). If you just deployed, make sure migrations ran (build.sh).`;
+    }
+    toast({ title, description, variant: 'destructive' });
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
